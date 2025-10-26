@@ -1,0 +1,107 @@
+import React from 'react';
+import { X } from 'lucide-react';
+import { useTasks } from '../context/TaskContext';
+
+type AddToListModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  taskId: string;
+};
+
+const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, onClose, taskId }) => {
+  const { lists, addTaskToList } = useTasks();
+
+  if (!isOpen) return null;
+
+  const handleAddToList = (listId: string) => {
+    addTaskToList(taskId, listId);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50"
+         style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      <div 
+        className="rounded-2xl shadow-xl p-6 w-full max-w-md transition-colors"
+        style={{ backgroundColor: 'rgb(var(--color-surface))' }}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6 border-b pb-3"
+             style={{ borderColor: 'rgb(var(--color-border))' }}>
+          <h2 className="text-xl font-bold"
+              style={{ color: 'rgb(var(--color-text-primary))' }}>
+            Ajouter à une liste
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'rgb(var(--color-text-muted))' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'rgb(var(--color-text-primary))';
+              e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'rgb(var(--color-text-muted))';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Liste */}
+        <div className="space-y-3">
+          {lists.map(list => (
+            <button
+              key={list.id}
+              onClick={() => handleAddToList(list.id)}
+              className="w-full flex items-center gap-4 p-4 rounded-lg border transition-colors"
+              style={{
+                backgroundColor: 'rgb(var(--color-surface))',
+                borderColor: 'rgb(var(--color-border))'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+                e.currentTarget.style.borderColor = 'rgb(var(--color-text-muted))';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(var(--color-surface))';
+                e.currentTarget.style.borderColor = 'rgb(var(--color-border))';
+              }}
+            >
+              <div className={`w-1.5 h-8 rounded bg-${list.color}-500`} />
+              <div className="flex items-center justify-between flex-1">
+                <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                  {list.name}
+                </span>
+                <span className="text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                  {list.taskIds.length}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <button
+          onClick={onClose}
+          className="mt-6 w-full px-6 py-3 rounded-lg transition-colors font-medium"
+          style={{
+            backgroundColor: 'rgb(var(--color-active))',
+            color: 'rgb(var(--color-text-primary))'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgb(var(--color-active))';
+          }}
+        >
+          Terminer
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AddToListModal;

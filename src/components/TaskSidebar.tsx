@@ -1,0 +1,179 @@
+import React, { useState } from 'react';
+import { useTasks } from '../context/TaskContext';
+import { Search, Clock, Star, Filter, X } from 'lucide-react';
+
+const TaskSidebar: React.FC = () => {
+  const { tasks, colorSettings } = useTasks();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+
+  // Filter tasks (exclude completed ones)
+  const availableTasks = tasks.filter(task => 
+    !task.completed &&
+    task.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (filterCategory === '' || task.category === filterCategory) &&
+    (filterPriority === '' || task.priority.toString() === filterPriority)
+  );
+
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      red: '#EF4444',
+      blue: '#3B82F6',
+      green: '#10B981',
+      purple: '#8B5CF6',
+      orange: '#F97316'
+    };
+    return colors[category as keyof typeof colors] || '#6B7280';
+  };
+
+  const getPriorityColor = (priority: number) => {
+    const colors = {
+      1: 'bg-red-100 text-red-800',
+      2: 'bg-orange-100 text-orange-800',
+      3: 'bg-yellow-100 text-yellow-800',
+      4: 'bg-blue-100 text-blue-800',
+      5: 'bg-purple-100 text-purple-800'
+    };
+    return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  return (
+    <div className="w-80 border-r flex flex-col h-full" style={{ backgroundColor: 'rgb(var(--nav-bg))', borderColor: 'rgb(var(--nav-border))' }}>
+      {/* Sidebar Header */}
+      <div className="p-4 border-b" style={{ borderColor: 'rgb(var(--nav-border))' }}>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: 'rgb(var(--color-text-primary))' }}>Tâches disponibles</h2>
+        
+        {/* Search */}
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: 'rgb(var(--color-text-muted))' }} />
+          <input
+            type="text"
+            placeholder="Rechercher une tâche..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+            style={{ 
+              backgroundColor: 'rgb(var(--color-surface))',
+              borderColor: 'rgb(var(--color-border))',
+              color: 'rgb(var(--color-text-primary))'
+            }}
+          />
+        </div>
+
+        {/* Filters */}
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+            style={{ 
+              backgroundColor: 'rgb(var(--color-surface))',
+              borderColor: 'rgb(var(--color-border))',
+              color: 'rgb(var(--color-text-primary))'
+            }}
+          >
+            <option value="">Toutes catégories</option>
+            {Object.entries(colorSettings).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+            style={{ 
+              backgroundColor: 'rgb(var(--color-surface))',
+              borderColor: 'rgb(var(--color-border))',
+              color: 'rgb(var(--color-text-primary))'
+            }}
+          >
+            <option value="">Toutes priorités</option>
+            <option value="1">Priorité 1</option>
+            <option value="2">Priorité 2</option>
+            <option value="3">Priorité 3</option>
+            <option value="4">Priorité 4</option>
+            <option value="5">Priorité 5</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Tasks List Container for External Events */}
+      <div id="external-events-container" className="flex-1 overflow-y-auto p-4 space-y-3">
+        {availableTasks.length === 0 ? (
+          <div className="text-center py-8" style={{ color: 'rgb(var(--color-text-muted))' }}>
+            <Filter size={48} className="mx-auto mb-2" style={{ color: 'rgb(var(--color-text-muted))' }} />
+            <p>Aucune tâche trouvée</p>
+          </div>
+        ) : (
+          availableTasks.map(task => (
+            <div
+              key={task.id}
+              className="external-event rounded-lg p-3 border cursor-move hover:shadow-md transition-all duration-200 group select-none"
+              style={{ 
+                backgroundColor: 'rgb(var(--color-surface))',
+                borderColor: 'rgb(var(--color-border))',
+                borderLeft: `4px solid ${getCategoryColor(task.category)}`
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(var(--color-surface))'}
+              data-task={JSON.stringify(task)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: getCategoryColor(task.category) }}
+                  />
+                  <span className="font-medium text-sm" style={{ color: 'rgb(var(--color-text-primary))' }}>{task.name}</span>
+                  {task.bookmarked && (
+                    <Star size={14} className="favorite-icon filled" />
+                  )}
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                  P{task.priority}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                <div className="flex items-center gap-1">
+                  <Clock size={12} />
+                  <span>{task.estimatedTime} min</span>
+                </div>
+                <span className="text-xs px-2 py-1 rounded border" style={{ 
+                  backgroundColor: 'rgb(var(--color-surface))',
+                  borderColor: 'rgb(var(--color-border))',
+                  color: 'rgb(var(--color-text-secondary))'
+                }}>
+                  {colorSettings[task.category]}
+                </span>
+              </div>
+              
+              <div className="mt-2 text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                Deadline: {new Date(task.deadline).toLocaleDateString('fr-FR')}
+              </div>
+              
+              {/* Drag indicator */}
+              <div className="mt-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'rgb(var(--color-accent))' }}>
+                ↗ Glisser vers le calendrier
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div className="p-4 border-t" style={{ borderColor: 'rgb(var(--nav-border))', backgroundColor: 'rgb(var(--color-hover))' }}>
+        <div className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
+          <p className="font-medium mb-1">💡 Comment utiliser :</p>
+          <p>• Glissez une tâche vers le calendrier</p>
+          <p>• Les propriétés se transfèrent automatiquement</p>
+          <p>• La durée définit la longueur de l'événement</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TaskSidebar;

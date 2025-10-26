@@ -1,0 +1,456 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode colors */
+    --color-primary: 71 85 105; /* #475569 - Slate 600 */
+    --color-secondary: 100 116 139; /* #64748B - Slate 500 */
+    --color-accent: 59 130 246; /* #3B82F6 - Blue 500 */
+    --color-success: 34 197 94; /* #22C55E - Green 500 */
+    --color-warning: 245 158 11; /* #F59E0B - Amber 500 */
+    --color-error: 239 68 68; /* #EF4444 - Red 500 */
+    --color-surface: 255 255 255; /* #FFFFFF */
+    --color-background: 248 250 252; /* #F8FAFC - Slate 50 */
+    
+    /* Semantic colors for better accessibility */
+    --color-text-primary: 15 23 42; /* #0F172A - Slate 900 */
+    --color-text-secondary: 71 85 105; /* #475569 - Slate 600 */
+    --color-text-muted: 148 163 184; /* #94A3B8 - Slate 400 */
+    --color-border: 226 232 240; /* #E2E8F0 - Slate 200 */
+    --color-border-muted: 241 245 249; /* #F1F5F9 - Slate 100 */
+    --color-hover: 248 250 252; /* #F8FAFC - Slate 50 */
+    --color-active: 241 245 249; /* #F1F5F9 - Slate 100 */
+    
+    /* Navigation specific colors */
+    --nav-bg: 255 255 255; /* White */
+    --nav-border: 226 232 240; /* #E2E8F0 - Slate 200 */
+    --nav-item-text: 100 116 139; /* #64748B - Slate 500 */
+    --nav-item-hover-bg: 248 250 252; /* #F8FAFC - Slate 50 */
+    --nav-item-hover-text: 15 23 42; /* #0F172A - Slate 900 */
+    --nav-item-active-bg: 15 23 42; /* #0F172A - Slate 900 */
+    --nav-item-active-text: 255 255 255; /* White */
+    
+    /* Calendar specific colors */
+    --calendar-bg: 255 255 255; /* White */
+    --calendar-border: 226 232 240; /* #E2E8F0 - Slate 200 */
+    --calendar-header-bg: 248 250 252; /* #F8FAFC - Slate 50 */
+    --calendar-header-text: 71 85 105; /* #475569 - Slate 600 */
+    --calendar-day-bg: 255 255 255; /* White */
+    --calendar-day-hover: 248 250 252; /* #F8FAFC - Slate 50 */
+    --calendar-today-bg: 241 245 249; /* #F1F5F9 - Slate 100 */
+    
+    /* Table specific colors */
+    --table-bg: 255 255 255; /* White */
+    --table-border: 226 232 240; /* #E2E8F0 - Slate 200 */
+    --table-header-bg: 248 250 252; /* #F8FAFC - Slate 50 */
+    --table-header-text: 71 85 105; /* #475569 - Slate 600 */
+    --table-row-hover: 248 250 252; /* #F8FAFC - Slate 50 */
+    --table-row-even: 255 255 255; /* White */
+    --table-row-odd: 249 250 251; /* #F9FAFB - Gray 50 */
+  }
+
+  .dark {
+    /* Dark mode colors */
+    --color-primary: 148 163 184; /* #94A3B8 - Slate 400 */
+    --color-secondary: 100 116 139; /* #64748B - Slate 500 */
+    --color-accent: 96 165 250; /* #60A5FA - Blue 400 */
+    --color-success: 52 211 153; /* #34D399 - Green 400 */
+    --color-warning: 251 191 36; /* #FBBF24 - Amber 400 */
+    --color-error: 248 113 113; /* #F87171 - Red 400 */
+    --color-surface: 30 41 59; /* #1E293B - Slate 800 */
+    --color-background: 15 23 42; /* #0F172A - Slate 900 */
+    
+    /* Semantic colors for dark mode */
+    --color-text-primary: 248 250 252; /* #F8FAFC - Slate 50 */
+    --color-text-secondary: 203 213 225; /* #CBD5E1 - Slate 300 */
+    --color-text-muted: 148 163 184; /* #94A3B8 - Slate 400 */
+    --color-border: 71 85 105; /* #475569 - Slate 600 */
+    --color-border-muted: 51 65 85; /* #334155 - Slate 700 */
+    --color-hover: 51 65 85; /* #334155 - Slate 700 */
+    --color-active: 71 85 105; /* #475569 - Slate 600 */
+    
+    /* Navigation specific colors for dark mode */
+    --nav-bg: 30 41 59; /* #1E293B - Slate 800 */
+    --nav-border: 71 85 105; /* #475569 - Slate 600 */
+    --nav-item-text: 148 163 184; /* #94A3B8 - Slate 400 */
+    --nav-item-hover-bg: 51 65 85; /* #334155 - Slate 700 */
+    --nav-item-hover-text: 203 213 225; /* #CBD5E1 - Slate 300 */
+    --nav-item-active-bg: 71 85 105; /* #475569 - Slate 600 */
+    --nav-item-active-text: 255 255 255; /* White */
+    
+    /* Calendar specific colors for dark mode */
+    --calendar-bg: 30 41 59; /* #1E293B - Slate 800 */
+    --calendar-border: 71 85 105; /* #475569 - Slate 600 */
+    --calendar-header-bg: 15 23 42; /* #0F172A - Slate 900 */
+    --calendar-header-text: 203 213 225; /* #CBD5E1 - Slate 300 */
+    --calendar-day-bg: 15 23 42; /* #0F172A - Slate 900 */
+    --calendar-day-hover: 30 41 59; /* #1E293B - Slate 800 */
+    --calendar-today-bg: 51 65 85; /* #334155 - Slate 700 */
+    
+    /* Table specific colors for dark mode */
+    --table-bg: 30 41 59; /* #1E293B - Slate 800 */
+    --table-border: 71 85 105; /* #475569 - Slate 600 */
+    --table-header-bg: 15 23 42; /* #0F172A - Slate 900 */
+    --table-header-text: 203 213 225; /* #CBD5E1 - Slate 300 */
+    --table-row-hover: 51 65 85; /* #334155 - Slate 700 */
+    --table-row-even: 30 41 59; /* #1E293B - Slate 800 */
+    --table-row-odd: 15 23 42; /* #0F172A - Slate 900 */
+  }
+
+  body {
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-text-primary));
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    color: rgb(var(--color-text-primary));
+    font-family: 'Inter', sans-serif;
+    transition: color 0.3s ease;
+  }
+
+  /* Ensure proper contrast ratios for accessibility */
+  @media (prefers-contrast: high) {
+    :root {
+      --color-text-primary: 0 0 0; /* Pure black */
+      --color-background: 255 255 255; /* Pure white */
+    }
+    
+    .dark {
+      --color-text-primary: 255 255 255; /* Pure white */
+      --color-background: 0 0 0; /* Pure black */
+    }
+  }
+}
+
+@layer components {
+  /* Design moderne et sobre */
+  .card {
+    background-color: rgb(var(--color-surface));
+    border: 1px solid rgb(var(--color-border));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .card-elevated {
+    background-color: rgb(var(--color-surface));
+    border: 1px solid rgb(var(--color-border));
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin: 0 0.5rem;
+    color: rgb(var(--nav-item-text));
+    background-color: transparent;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+  }
+
+  .sidebar-item:hover {
+    background-color: rgb(var(--nav-item-hover-bg));
+    color: rgb(var(--nav-item-hover-text));
+    transform: translateX(4px);
+  }
+
+  .sidebar-item.active {
+    background-color: rgb(var(--nav-item-active-bg));
+    color: rgb(var(--nav-item-active-text));
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Navigation container */
+  .nav-container {
+    background-color: rgb(var(--nav-bg));
+    border-color: rgb(var(--nav-border));
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Favoris en jaune */
+  .favorite-icon {
+    @apply text-yellow-500;
+  }
+
+  .favorite-icon.filled {
+    @apply text-yellow-500;
+    fill: #EAB308;
+  }
+
+  .task-priority-1 {
+    @apply bg-red-50 text-red-700 border border-red-200;
+  }
+
+  .dark .task-priority-1 {
+    @apply bg-red-900/20 text-red-300 border-red-800;
+  }
+
+  .task-priority-2 {
+    @apply bg-orange-50 text-orange-700 border border-orange-200;
+  }
+
+  .dark .task-priority-2 {
+    @apply bg-orange-900/20 text-orange-300 border-orange-800;
+  }
+
+  .task-priority-3 {
+    @apply bg-yellow-50 text-yellow-700 border border-yellow-200;
+  }
+
+  .dark .task-priority-3 {
+    @apply bg-yellow-900/20 text-yellow-300 border-yellow-800;
+  }
+
+  .task-priority-4 {
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+  }
+
+  .dark .task-priority-4 {
+    @apply bg-blue-900/20 text-blue-300 border-blue-800;
+  }
+
+  .task-priority-5 {
+    @apply bg-slate-50 text-slate-700 border border-slate-200;
+  }
+
+  .dark .task-priority-5 {
+    @apply bg-slate-800 text-slate-300 border-slate-700;
+  }
+
+  .task-category-red {
+    @apply bg-red-500;
+  }
+
+  .task-category-blue {
+    @apply bg-blue-500;
+  }
+
+  .task-category-green {
+    @apply bg-green-500;
+  }
+
+  .task-category-purple {
+    @apply bg-purple-500;
+  }
+
+  .task-category-orange {
+    @apply bg-orange-500;
+  }
+
+  .btn-primary {
+    @apply bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .dark .btn-primary {
+    @apply bg-slate-700 hover:bg-slate-600;
+  }
+
+  .btn-secondary {
+    @apply bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-6 py-3 rounded-lg transition-all duration-200 font-medium;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .dark .btn-secondary {
+    @apply bg-slate-800 border-slate-600 hover:bg-slate-700 text-slate-300;
+  }
+
+  .collaborative-task {
+    @apply bg-blue-50 border-l-4 border-blue-500;
+  }
+
+  .dark .collaborative-task {
+    @apply bg-blue-900/20 border-blue-400;
+  }
+
+  /* Landing page styles */
+  .hero-gradient {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  }
+
+  .feature-card {
+    @apply bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-all duration-300;
+  }
+
+  .glass-modal {
+    @apply bg-white/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl;
+  }
+
+  .dark .glass-modal {
+    @apply bg-slate-900/95 border-slate-700/50;
+  }
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--table-border));
+  background-color: rgb(var(--table-bg));
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.data-table {
+  min-width: 100%;
+  background-color: rgb(var(--table-bg));
+  transition: background-color 0.3s ease;
+}
+
+.data-table thead {
+  background-color: rgb(var(--table-header-bg));
+  transition: background-color 0.3s ease;
+}
+
+.data-table th {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--table-header-text));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: 'Inter', sans-serif;
+  transition: color 0.3s ease;
+}
+
+.data-table td {
+  padding: 1rem 1.5rem;
+  white-space: nowrap;
+  color: rgb(var(--color-text-primary));
+  transition: color 0.3s ease;
+}
+
+.data-table tr {
+  transition: background-color 0.3s ease;
+  border-bottom: 1px solid rgb(var(--table-border));
+}
+
+.data-table tbody tr:hover {
+  background-color: rgb(var(--table-row-hover));
+}
+
+.data-table tbody tr:nth-child(even) {
+  background-color: rgb(var(--table-row-even));
+}
+
+.data-table tbody tr:nth-child(odd) {
+  background-color: rgb(var(--table-row-odd));
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* FullCalendar Custom Styles */
+.fc {
+  font-family: 'Inter', sans-serif;
+  transition: all 0.3s ease;
+}
+
+.fc-theme-standard .fc-scrollgrid {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: rgb(var(--calendar-bg));
+  transition: background-color 0.3s ease;
+}
+
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: rgb(var(--calendar-border));
+  transition: border-color 0.3s ease;
+}
+
+.fc-col-header-cell {
+  background-color: rgb(var(--calendar-header-bg));
+  color: rgb(var(--calendar-header-text));
+  font-weight: 600;
+  padding: 16px 8px;
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.fc-daygrid-day {
+  background-color: rgb(var(--calendar-day-bg));
+  transition: background-color 0.3s ease;
+}
+
+.fc-daygrid-day:hover {
+  background-color: rgb(var(--calendar-day-hover));
+}
+
+.fc-event {
+  border-radius: 8px;
+  border: none !important;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 2px;
+  font-family: 'Inter', sans-serif;
+}
+
+.fc-today {
+  background-color: rgb(var(--calendar-today-bg)) !important;
+  transition: background-color 0.3s ease;
+}
+
+
+/* Scrollbar moderne */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Dark mode pour les groupes et containers */
+.dark .group, .dark .container {
+  @apply bg-slate-900;
+}
+
+/* Pinned conversation style */
+.conversation-pinned {
+  @apply bg-amber-50 border-l-4 border-amber-400;
+}
+
+.dark .conversation-pinned {
+  @apply bg-amber-900/20 border-amber-400;
+}
