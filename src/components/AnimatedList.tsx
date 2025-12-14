@@ -31,7 +31,7 @@ const AnimatedList = ({
   itemClassName = '',
   displayScrollbar = true,
   initialSelectedIndex = -1,
-  children, // ✅ ajout ici
+  children,
 }) => {
   const listRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(initialSelectedIndex);
@@ -73,28 +73,6 @@ const AnimatedList = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [items, selectedIndex, onItemSelect, enableArrowNavigation]);
 
-  useEffect(() => {
-    if (!keyboardNav || selectedIndex < 0 || !listRef.current) return;
-    const container = listRef.current;
-    const selectedItem = container.querySelector(`[data-index="${selectedIndex}"]`);
-    if (selectedItem) {
-      const extraMargin = 50;
-      const containerScrollTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
-      const itemTop = selectedItem.offsetTop;
-      const itemBottom = itemTop + selectedItem.offsetHeight;
-      if (itemTop < containerScrollTop + extraMargin) {
-        container.scrollTo({ top: itemTop - extraMargin, behavior: 'smooth' });
-      } else if (itemBottom > containerScrollTop + containerHeight - extraMargin) {
-        container.scrollTo({
-          top: itemBottom - containerHeight + extraMargin,
-          behavior: 'smooth',
-        });
-      }
-    }
-    setKeyboardNav(false);
-  }, [selectedIndex, keyboardNav]);
-
   return (
     <div className={`scroll-list-container ${className}`}>
       <div
@@ -114,7 +92,7 @@ const AnimatedList = ({
             }}
           >
             {children ? (
-              children(item, index) // ✅ appel à la fonction enfant
+              children(item, index)
             ) : (
               <div className={`item ${selectedIndex === index ? 'selected' : ''} ${itemClassName}`}>
                 <p className="item-text">{item}</p>
@@ -134,4 +112,3 @@ const AnimatedList = ({
 };
 
 export default AnimatedList;
-
