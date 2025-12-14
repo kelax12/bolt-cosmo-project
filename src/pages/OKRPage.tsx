@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, Target, TrendingUp, Calendar, Edit2, Trash2, CheckCircle, Circle, BarChart3, Settings, X, Minus, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Target, TrendingUp, Calendar, Edit2, Trash2, CheckCircle, BarChart3, Settings, X, Minus, Clock } from 'lucide-react';
 import OKRModal from '../components/OKRModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 
 type KeyResult = {
   id: string;
@@ -10,19 +11,19 @@ type KeyResult = {
   targetValue: number;
   unit: string;
   completed: boolean;
-  estimatedTime: number; // AJOUT: Temps estimé en minutes
+  estimatedTime: number;
 };
 
 type Objective = {
   id: string;
   title: string;
   description: string;
-  category: string; // Changé pour permettre des catégories personnalisées
+  category: string;
   startDate: string;
   endDate: string;
   keyResults: KeyResult[];
   completed: boolean;
-  estimatedTime: number; // AJOUT: Temps estimé total en minutes
+  estimatedTime: number;
 };
 
 type Category = {
@@ -33,7 +34,7 @@ type Category = {
 };
 
 const OKRPage: React.FC = () => {
-  // Catégories par défaut
+  const location = useLocation();
   const [categories, setCategories] = useState<Category[]>([
     { id: 'personal', name: 'Personnel', color: 'blue', icon: '👤' },
     { id: 'professional', name: 'Professionnel', color: 'green', icon: '💼' },
@@ -50,7 +51,7 @@ const OKRPage: React.FC = () => {
       startDate: '2025-01-01',
       endDate: '2025-06-30',
       completed: false,
-      estimatedTime: 180, // AJOUT: 3 heures au total
+      estimatedTime: 180,
       keyResults: [
         {
           id: '1-1',
@@ -59,7 +60,7 @@ const OKRPage: React.FC = () => {
           targetValue: 20,
           unit: 'textes',
           completed: false,
-          estimatedTime: 60 // AJOUT: 1 heure par résultat clé
+          estimatedTime: 60
         },
         {
           id: '1-2',
@@ -68,7 +69,7 @@ const OKRPage: React.FC = () => {
           targetValue: 15,
           unit: 'textes/semaine',
           completed: false,
-          estimatedTime: 90 // AJOUT: 1h30 par résultat clé
+          estimatedTime: 90
         },
         {
           id: '1-3',
@@ -77,7 +78,7 @@ const OKRPage: React.FC = () => {
           targetValue: 10,
           unit: 'dissertations',
           completed: false,
-          estimatedTime: 30 // AJOUT: 30 min par résultat clé
+          estimatedTime: 30
         }
       ]
     },
@@ -89,7 +90,7 @@ const OKRPage: React.FC = () => {
       startDate: '2025-01-01',
       endDate: '2025-12-31',
       completed: false,
-      estimatedTime: 120, // AJOUT: 2 heures au total
+      estimatedTime: 120,
       keyResults: [
         {
           id: '2-1',
@@ -98,7 +99,7 @@ const OKRPage: React.FC = () => {
           targetValue: 90,
           unit: '%',
           completed: false,
-          estimatedTime: 60 // AJOUT: 1 heure par résultat clé
+          estimatedTime: 60
         },
         {
           id: '2-2',
@@ -107,7 +108,7 @@ const OKRPage: React.FC = () => {
           targetValue: 8,
           unit: 'heures',
           completed: false,
-          estimatedTime: 60 // AJOUT: 1 heure par résultat clé
+          estimatedTime: 60
         }
       ]
     }
@@ -117,32 +118,32 @@ const OKRPage: React.FC = () => {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [editingObjective, setEditingObjective] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [deletingObjective, setDeletingObjective] = useState<string | null>(null);
 
-  // État pour la modal d'ajout d'objectif
   const [newObjective, setNewObjective] = useState({
     title: '',
     description: '',
     category: 'personal',
     startDate: '',
     endDate: '',
-    estimatedTime: 60 // AJOUT: Temps estimé par défaut
+    estimatedTime: 60
   });
 
   const [keyResults, setKeyResults] = useState([
-    { title: '', targetValue: '', currentValue: '', estimatedTime: '' }, // AJOUT: estimatedTime
-    { title: '', targetValue: '', currentValue: '', estimatedTime: '' }, // AJOUT: estimatedTime
-    { title: '', targetValue: '', currentValue: '', estimatedTime: '' }  // AJOUT: estimatedTime
+    { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
+    { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
+    { title: '', targetValue: '', currentValue: '', estimatedTime: '' }
   ]);
 
   const categoryColors = {
-    blue: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
-    green: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' },
-    red: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
-    purple: { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200' },
-    orange: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' },
-    yellow: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200' },
-    pink: { bg: 'bg-pink-100', text: 'text-pink-800', border: 'border-pink-200' },
-    indigo: { bg: 'bg-indigo-100', text: 'text-indigo-800', border: 'border-indigo-200' },
+    blue: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3B82F6', border: '#BFDBFE' },
+    green: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10B981', border: '#A7F3D0' },
+    red: { bg: 'rgba(239, 68, 68, 0.1)', text: '#EF4444', border: '#FECACA' },
+    purple: { bg: 'rgba(139, 92, 246, 0.1)', text: '#8B5CF6', border: '#DDD6FE' },
+    orange: { bg: 'rgba(249, 115, 22, 0.1)', text: '#F97316', border: '#FED7AA' },
+    yellow: { bg: 'rgba(245, 158, 11, 0.1)', text: '#F59E0B', border: '#FDE68A' },
+    pink: { bg: 'rgba(236, 72, 153, 0.1)', text: '#EC4899', border: '#FBCFE8' },
+    indigo: { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366F1', border: '#C7D2FE' },
   };
 
   const getProgress = (keyResults: KeyResult[]) => {
@@ -170,13 +171,13 @@ const OKRPage: React.FC = () => {
   };
 
   const addKeyResult = () => {
-    if (keyResults.length < 10) { // Limite à 10 résultats clés
-      setKeyResults([...keyResults, { title: '', targetValue: '', currentValue: '', estimatedTime: '' }]); // AJOUT: estimatedTime
+    if (keyResults.length < 10) {
+      setKeyResults([...keyResults, { title: '', targetValue: '', currentValue: '', estimatedTime: '' }]);
     }
   };
 
   const removeKeyResult = (index: number) => {
-    if (keyResults.length > 1) { // Minimum 1 résultat clé
+    if (keyResults.length > 1) {
       setKeyResults(keyResults.filter((_, i) => i !== index));
     }
   };
@@ -199,13 +200,17 @@ const OKRPage: React.FC = () => {
   };
 
   const deleteCategory = (categoryId: string) => {
-    // Vérifier si la catégorie est utilisée
     const isUsed = objectives.some(obj => obj.category === categoryId);
     if (isUsed) {
       alert('Cette catégorie est utilisée par des objectifs existants et ne peut pas être supprimée.');
       return;
     }
     setCategories(prev => prev.filter(cat => cat.id !== categoryId));
+  };
+
+  const deleteObjective = (objectiveId: string) => {
+    setObjectives(prev => prev.filter(obj => obj.id !== objectiveId));
+    setDeletingObjective(null);
   };
 
   const handleSubmitObjective = (e: React.FormEvent) => {
@@ -233,33 +238,32 @@ const OKRPage: React.FC = () => {
       startDate: newObjective.startDate,
       endDate: newObjective.endDate,
       completed: false,
-      estimatedTime: newObjective.estimatedTime, // AJOUT
+      estimatedTime: newObjective.estimatedTime,
       keyResults: validKeyResults.map((kr, index) => ({
         id: `${Date.now()}-${index}`,
         title: kr.title,
         currentValue: Number(kr.currentValue) || 0,
         targetValue: Number(kr.targetValue),
-        unit: '', // Pas d'unité dans cette version
+        unit: '',
         completed: false,
-        estimatedTime: Number(kr.estimatedTime) || 30 // AJOUT
+        estimatedTime: Number(kr.estimatedTime) || 30
       }))
     };
 
     setObjectives([...objectives, newObj]);
     
-    // Reset form
     setNewObjective({
       title: '',
       description: '',
       category: 'personal',
       startDate: '',
       endDate: '',
-      estimatedTime: 60 // AJOUT
+      estimatedTime: 60
     });
     setKeyResults([
-      { title: '', targetValue: '', currentValue: '', estimatedTime: '' }, // AJOUT: estimatedTime
-      { title: '', targetValue: '', currentValue: '', estimatedTime: '' }, // AJOUT: estimatedTime
-      { title: '', targetValue: '', currentValue: '', estimatedTime: '' }  // AJOUT: estimatedTime
+      { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
+      { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
+      { title: '', targetValue: '', currentValue: '', estimatedTime: '' }
     ]);
     setShowAddObjective(false);
   };
@@ -279,6 +283,16 @@ const OKRPage: React.FC = () => {
 
   const getCategoryById = (id: string) => categories.find(cat => cat.id === id);
 
+  // Auto-open modal when navigating from dashboard
+  useEffect(() => {
+    const state = location.state as { selectedOKRId?: string };
+    if (state?.selectedOKRId) {
+      setEditingObjective(state.selectedOKRId);
+      // Clear the state to avoid reopening on subsequent renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -286,7 +300,6 @@ const OKRPage: React.FC = () => {
       className="p-8 max-w-7xl mx-auto" 
       style={{ backgroundColor: 'rgb(var(--color-background))' }}
     >
-      {/* Header */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -344,7 +357,6 @@ const OKRPage: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {[
           { icon: Target, color: 'blue', label: 'Total Objectifs', value: stats.total },
@@ -389,7 +401,6 @@ const OKRPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Filters */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -422,10 +433,10 @@ const OKRPage: React.FC = () => {
               className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-all"
               style={{
                 backgroundColor: selectedCategory === category.id 
-                  ? `${categoryColors[category.color as keyof typeof categoryColors]?.bg || 'rgb(var(--color-accent) / 0.1)'}`
+                  ? categoryColors[category.color as keyof typeof categoryColors]?.bg || 'rgb(var(--color-accent) / 0.1)'
                   : 'rgb(var(--color-hover))',
                 color: selectedCategory === category.id 
-                  ? `${categoryColors[category.color as keyof typeof categoryColors]?.text || 'rgb(var(--color-accent))'}`
+                  ? categoryColors[category.color as keyof typeof categoryColors]?.text || 'rgb(var(--color-accent))'
                   : 'rgb(var(--color-text-secondary))'
               }}
             >
@@ -436,7 +447,6 @@ const OKRPage: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Objectives Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AnimatePresence mode="popLayout">
           {filteredObjectives.map((objective, index) => {
@@ -458,7 +468,6 @@ const OKRPage: React.FC = () => {
                   borderColor: 'rgb(var(--color-border))'
                 }}
               >
-                {/* Objective Header */}
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -498,6 +507,7 @@ const OKRPage: React.FC = () => {
                     <motion.button 
                       whileHover={{ scale: 1.15, rotate: 5 }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => setDeletingObjective(objective.id)}
                       className="p-1 transition-colors" 
                       style={{ color: 'rgb(var(--color-text-muted))' }}
                     >
@@ -506,11 +516,9 @@ const OKRPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Circular Progress Visualization */}
                 <div className="mb-4 flex items-center gap-6">
                   <div className="relative">
                     <svg className="transform -rotate-90" width="80" height="80">
-                      {/* Background circle */}
                       <circle
                         cx="40"
                         cy="40"
@@ -519,7 +527,6 @@ const OKRPage: React.FC = () => {
                         strokeWidth="8"
                         fill="none"
                       />
-                      {/* Progress circle */}
                       <motion.circle
                         cx="40"
                         cy="40"
@@ -528,8 +535,9 @@ const OKRPage: React.FC = () => {
                         strokeWidth="8"
                         fill="none"
                         strokeLinecap="round"
-                        initial={{ strokeDasharray: "0 251.2" }}
-                        animate={{ strokeDasharray: `${(progress / 100) * 251.2} 251.2` }}
+                        strokeDasharray={`${2 * Math.PI * 32}`}
+                        initial={{ strokeDashoffset: 2 * Math.PI * 32 }}
+                        animate={{ strokeDashoffset: (2 * Math.PI * 32) * (1 - progress / 100) }}
                         transition={{ duration: 1, ease: "easeOut" }}
                       />
                     </svg>
@@ -571,7 +579,6 @@ const OKRPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Key Results */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>Résultats Clés</h4>
                   {objective.keyResults.map((keyResult, krIndex) => {
@@ -589,27 +596,14 @@ const OKRPage: React.FC = () => {
                       >
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{keyResult.title}</span>
-                          <div className="flex items-center gap-2">
-                            <motion.span 
-                              whileHover={{ scale: 1.1 }}
-                              className="text-xs flex items-center gap-1" 
-                              style={{ color: 'rgb(var(--color-text-muted))' }}
-                            >
-                              <Clock size={12} />
-                              {keyResult.estimatedTime}min
-                            </motion.span>
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ delay: krIndex * 0.1 + 0.2 }}
-                            >
-                              {keyResult.completed ? (
-                                <CheckCircle size={16} className="text-green-500 dark:text-green-400" />
-                              ) : (
-                                <Circle size={16} style={{ color: 'rgb(var(--color-text-muted))' }} />
-                              )}
-                            </motion.div>
-                          </div>
+                          <motion.span 
+                            whileHover={{ scale: 1.1 }}
+                            className="text-xs flex items-center gap-1" 
+                            style={{ color: 'rgb(var(--color-text-muted))' }}
+                          >
+                            <Clock size={12} />
+                            {keyResult.estimatedTime}min
+                          </motion.span>
                         </div>
                         
                         <div className="flex items-center gap-3">
@@ -655,7 +649,6 @@ const OKRPage: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Modals with animations */}
       <AnimatePresence>
         {showCategoryManager && (
           <motion.div
@@ -690,7 +683,6 @@ const OKRPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Add Objective Modal with animations */}
       <AnimatePresence>
         {showAddObjective && (
           <motion.div 
@@ -721,7 +713,6 @@ const OKRPage: React.FC = () => {
               </div>
 
               <form onSubmit={handleSubmitObjective} className="p-6 space-y-6">
-                {/* Informations principales */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
@@ -820,7 +811,6 @@ const OKRPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* AJOUT: Champ temps estimé pour l'objectif */}
                     <div>
                       <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
                          Temps estimé total (minutes) *
@@ -844,7 +834,6 @@ const OKRPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Résultats Clés Dynamiques */}
                 <div className="bg-gradient-to-r from-gray-50 dark:from-gray-800 to-blue-50 dark:to-blue-900/20 p-6 rounded-lg border transition-colors" style={{ borderColor: 'rgb(var(--color-border))' }}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
@@ -949,7 +938,6 @@ const OKRPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* AJOUT: Champ temps estimé pour chaque résultat clé */}
                           <div>
                             <label className="block text-sm font-medium mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
                               Temps (min) *
@@ -975,7 +963,6 @@ const OKRPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Action Button */}
                 <div className="flex justify-center pt-4">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -991,11 +978,61 @@ const OKRPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {deletingObjective && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setDeletingObjective(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="rounded-xl shadow-2xl w-full max-w-md p-6 transition-colors"
+              style={{ backgroundColor: 'rgb(var(--color-surface))' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-lg font-semibold mb-2" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                Confirmer la suppression
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                Êtes-vous sûr de vouloir supprimer cet objectif ? Cette action est irréversible et supprimera tous les résultats clés associés.
+              </p>
+              <div className="flex justify-end gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setDeletingObjective(null)}
+                  className="px-4 py-2 rounded-lg font-medium border transition-colors"
+                  style={{
+                    borderColor: 'rgb(var(--color-border))',
+                    color: 'rgb(var(--color-text-primary))'
+                  }}
+                >
+                  Annuler
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => deletingObjective && deleteObjective(deletingObjective)}
+                  className="px-4 py-2 rounded-lg font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors"
+                >
+                  Supprimer
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
 
-// Composant pour gérer les catégories
 const CategoryManagerModal: React.FC<{
   categories: Category[];
   onAddCategory: (category: Category) => void;
@@ -1072,7 +1109,6 @@ const CategoryManagerModal: React.FC<{
         </div>
 
         <div className="p-6">
-          {/* Ajouter une nouvelle catégorie */}
           <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg mb-6 transition-colors">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Ajouter une nouvelle catégorie</h3>
             <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1127,7 +1163,6 @@ const CategoryManagerModal: React.FC<{
             </form>
           </div>
 
-          {/* Liste des catégories existantes */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Catégories existantes</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
