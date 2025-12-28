@@ -35,6 +35,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
   const [taskToEventModal, setTaskToEventModal] = useState<Task | null>(null);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const [showColorSettings, setShowColorSettings] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
   const tasks = propTasks || contextTasks;
 
@@ -110,6 +111,13 @@ const TaskTable: React.FC<TaskTableProps> = ({
       });
     }
     setTaskToEventModal(null);
+  };
+
+  const confirmDelete = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete);
+      setTaskToDelete(null);
+    }
   };
 
   const handleTaskComplete = (taskId: string, e: React.MouseEvent) => {
@@ -312,9 +320,9 @@ const TaskTable: React.FC<TaskTableProps> = ({
                     >
                       <UserPlus size={16} />
                     </button>
-                    <button 
-                      onClick={() => deleteTask(task.id)} 
-                      className="p-2 rounded transition-colors hover:text-red-500"
+                      <button 
+                        onClick={() => setTaskToDelete(task.id)} 
+                        className="p-2 rounded transition-colors hover:text-red-500"
                       style={{ color: 'rgb(var(--color-text-muted))' }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
@@ -395,12 +403,39 @@ const TaskTable: React.FC<TaskTableProps> = ({
         />
       )}
 
-      <ColorSettingsModal
-        isOpen={showColorSettings}
-        onClose={() => setShowColorSettings(false)}
-      />
-    </>
-  );
-};
+        <ColorSettingsModal
+          isOpen={showColorSettings}
+          onClose={() => setShowColorSettings(false)}
+        />
+
+        {taskToDelete && (
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-[#1e2235] rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-700/50">
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-white mb-3">Confirmer la suppression</h3>
+                <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                  Êtes-vous sûr de vouloir supprimer cette tâche ? Cette action est irréversible.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setTaskToDelete(null)}
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white border border-slate-600 hover:bg-slate-800 transition-all duration-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all duration-200"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
 export default TaskTable;
