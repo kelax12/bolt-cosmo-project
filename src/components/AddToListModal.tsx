@@ -9,12 +9,17 @@ type AddToListModalProps = {
 };
 
 const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, onClose, taskId }) => {
-  const { lists, addTaskToList } = useTasks();
+  const { lists, addTaskToList, removeTaskFromList } = useTasks();
 
   if (!isOpen) return null;
 
   const handleAddToList = (listId: string) => {
-    addTaskToList(taskId, listId);
+    const list = lists.find(l => l.id === listId);
+    if (list?.taskIds.includes(taskId)) {
+      removeTaskFromList(taskId, listId);
+    } else {
+      addTaskToList(taskId, listId);
+    }
     onClose();
   };
 
@@ -49,38 +54,53 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, onClose, taskId
           </button>
         </div>
 
-        {/* Liste */}
-        <div className="space-y-3">
-          {lists.map(list => (
-            <button
-              key={list.id}
-              onClick={() => handleAddToList(list.id)}
-              className="w-full flex items-center gap-4 p-4 rounded-lg border transition-colors"
-              style={{
-                backgroundColor: 'rgb(var(--color-surface))',
-                borderColor: 'rgb(var(--color-border))'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-                e.currentTarget.style.borderColor = 'rgb(var(--color-text-muted))';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(var(--color-surface))';
-                e.currentTarget.style.borderColor = 'rgb(var(--color-border))';
-              }}
-            >
-              <div className={`w-1.5 h-8 rounded bg-${list.color}-500`} />
-              <div className="flex items-center justify-between flex-1">
-                <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
-                  {list.name}
-                </span>
-                <span className="text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                  {list.taskIds.length}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+          <div className="space-y-3">
+            {lists.map(list => {
+              const isAlreadyInList = list.taskIds.includes(taskId);
+              return (
+                <button
+                  key={list.id}
+                  onClick={() => handleAddToList(list.id)}
+                  className="w-full flex items-center gap-4 p-4 rounded-lg border transition-all"
+                  style={{
+                    backgroundColor: isAlreadyInList ? 'rgba(var(--color-active), 0.1)' : 'rgb(var(--color-surface))',
+                    borderColor: isAlreadyInList ? 'rgb(var(--color-active))' : 'rgb(var(--color-border))',
+                    transform: isAlreadyInList ? 'scale(1.02)' : 'scale(1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isAlreadyInList) {
+                      e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+                      e.currentTarget.style.borderColor = 'rgb(var(--color-text-muted))';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isAlreadyInList) {
+                      e.currentTarget.style.backgroundColor = 'rgb(var(--color-surface))';
+                      e.currentTarget.style.borderColor = 'rgb(var(--color-border))';
+                    }
+                  }}
+                >
+                  <div className={`w-1.5 h-8 rounded bg-${list.color}-500`} />
+                  <div className="flex items-center justify-between flex-1">
+                    <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                      {list.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {isAlreadyInList && (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full" 
+                              style={{ backgroundColor: 'rgb(var(--color-active))', color: 'white' }}>
+                          Déjà présent
+                        </span>
+                      )}
+                      <span className="text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                        {list.taskIds.length}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
         {/* Footer */}
         <button
