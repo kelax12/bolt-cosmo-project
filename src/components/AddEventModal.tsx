@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock } from 'lucide-react';
+import { X, Clock, Plus } from 'lucide-react';
 import { Task, useTasks } from '../context/TaskContext';
+import ColorSettingsModal from './ColorSettingsModal';
 
 type AddEventModalProps = {
   isOpen: boolean;
@@ -20,48 +21,100 @@ type AddEventModalProps = {
   };
 };
 
-const AddEventModal: React.FC<AddEventModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  task, 
-  onAddEvent, 
-  prefilledTimeSlot 
-}) => {
-  const { categories } = useTasks();
-  const [title, setTitle] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('12:00');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('13:00');
-  const [notes, setNotes] = useState('');
-  const [color, setColor] = useState('#3B82F6');
-
-  useEffect(() => {
-    if (isOpen) {
-      setTitle(task.name || '');
-      
-      if (prefilledTimeSlot) {
-        const start = new Date(prefilledTimeSlot.start);
-        const end = new Date(prefilledTimeSlot.end);
-        setStartDate(start.toISOString().split('T')[0]);
-        setStartTime(start.toTimeString().slice(0, 5));
-        setEndDate(end.toISOString().split('T')[0]);
-        setEndTime(end.toTimeString().slice(0, 5));
-      } else {
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        setStartDate(todayStr);
-        setEndDate(todayStr);
-      }
+  const AddEventModal: React.FC<AddEventModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    task, 
+    onAddEvent, 
+    prefilledTimeSlot 
+  }) => {
+    const { categories, favoriteColors } = useTasks();
+    const [title, setTitle] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [startTime, setStartTime] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [endTime, setEndTime] = useState('');
+    const [notes, setNotes] = useState('');
+    const [color, setColor] = useState('#3B82F6');
+    const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+    const [isColorSettingsOpen, setIsColorSettingsOpen] = useState(false);
+  
+    useEffect(() => {
+      if (isOpen) {
+        const prefilled = new Set<string>();
+        
+        setTitle(task.name || '');
+        if (task.name) prefilled.add('title');
+        
+        if (prefilledTimeSlot) {
+          const start = new Date(prefilledTimeSlot.start);
+          const end = new Date(prefilledTimeSlot.end);
+          setStartDate(start.toISOString().split('T')[0]);
+          setStartTime(start.toTimeString().slice(0, 5));
+          setEndDate(end.toISOString().split('T')[0]);
+          setEndTime(end.toTimeString().slice(0, 5));
+          if (task.description || task.notes) {
+            setNotes(task.description || task.notes || '');
+            prefilled.add('notes');
+          }
+          prefilled.add('startDate');
+          prefilled.add('startTime');
+          prefilled.add('endDate');
+          prefilled.add('endTime');
+        } else if (task.id !== '') {
+          const now = new Date();
+          const todayStr = now.toISOString().split('T')[0];
+          setStartDate(todayStr);
+          setEndDate(todayStr);
+          
+          if (task.description || task.notes) {
+            setNotes(task.description || task.notes || '');
+            prefilled.add('notes');
+          }
+  
+          // Use task estimated time if available
+          if (task.estimatedTime) {
+            const defaultStart = '12:00';
+            setStartTime(defaultStart);
+            const startTimeDate = new Date(`${todayStr}T${defaultStart}`);
+            const endTimeDate = new Date(startTimeDate.getTime() + task.estimatedTime * 60000);
+            setEndTime(endTimeDate.toTimeString().slice(0, 5));
+            setEndDate(endTimeDate.toISOString().split('T')[0]);
+            prefilled.add('endTime');
+            prefilled.add('endDate');
+            prefilled.add('startTime');
+          }
+        } else {
+          // Nouveau button clicked: Reset to empty for placeholders
+          setStartDate('');
+          setStartTime('');
+          setEndDate('');
+          setEndTime('');
+          setNotes('');
+        }
 
       if (task.category) {
         const categoryColor = categories.find(cat => cat.id === task.category)?.color;
-        setColor(categoryColor || '#3B82F6');
+        setColor(categoryColor || favoriteColors[0] || '#3B82F6');
+        prefilled.add('color');
+      } else {
+        setColor(favoriteColors[0] || '#3B82F6');
       }
+
+      setPrefilledFields(prefilled);
     }
-  }, [isOpen, task, prefilledTimeSlot, categories]);
+  }, [isOpen, task, prefilledTimeSlot, categories, favoriteColors]);
 
   if (!isOpen) return null;
+
+  const handleFieldChange = (field: string, setter: (val: any) => void, value: any) => {
+    setter(value);
+    setPrefilledFields(prev => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,21 +139,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       taskId: task.id
     });
     
+    onClose();
     setTitle('');
     setNotes('');
-    setColor('#3B82F6');
+    setColor(favoriteColors[0] || '#3B82F6');
   };
-
-  const colorOptions = [
-    { value: '#3B82F6', name: 'Bleu', color: '#3B82F6' },
-    { value: '#EF4444', name: 'Rouge', color: '#EF4444' },
-    { value: '#10B981', name: 'Vert', color: '#10B981' },
-    { value: '#8B5CF6', name: 'Violet', color: '#8B5CF6' },
-    { value: '#F97316', name: 'Orange', color: '#F97316' },
-    { value: '#F59E0B', name: 'Jaune', color: '#F59E0B' },
-    { value: '#EC4899', name: 'Rose', color: '#EC4899' },
-    { value: '#6366F1', name: 'Indigo', color: '#6366F1' },
-  ];
 
   const formatTimeDisplay = (timeValue: string) => {
     if (!timeValue) return '';
@@ -122,324 +165,375 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   };
 
   return (
-    <div
-      className="modal-content rounded-2xl shadow-2xl w-full max-w-4xl h-auto transition-colors"
-      style={{ backgroundColor: 'rgb(var(--color-surface))' }}
-    >
-      {/* Header */}
       <div
-        className="flex justify-between items-center px-6 py-4 border-b bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-purple-50 dark:to-purple-900/20 transition-colors"
-        style={{ borderColor: 'rgb(var(--color-border))' }}
-      >
-        <h2
-          className="text-xl font-bold"
-          style={{ color: 'rgb(var(--color-text-primary))' }}
-        >
-          Ajouter un événement
-        </h2>
+        className="modal-content rounded-2xl shadow-2xl w-full max-w-4xl h-auto transition-colors"
+        style={{ backgroundColor: 'rgb(var(--color-surface))' }}>
 
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: 'rgb(var(--color-text-muted))' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'rgb(var(--color-text-primary))';
-            e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'rgb(var(--color-text-muted))';
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-          aria-label="Fermer"
-        >
-          <X size={20} />
-        </button>
-      </div>
+        {/* Header */}
+        <div
+          className="flex justify-between items-center px-6 py-4 border-b bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-purple-50 dark:to-purple-900/20 transition-colors"
+          style={{ borderColor: 'rgb(var(--color-border))' }}>
 
-      <form onSubmit={handleSubmit} className="p-6">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Colonne gauche */}
-          <div className="col-span-7 space-y-4">
-            {/* Titre */}
-            <div>
-              <label
-                className="block text-sm font-semibold mb-2"
-                style={{ color: 'rgb(var(--color-text-secondary))' }}
-              >
-                Titre de l'événement *
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                style={{
-                  backgroundColor: 'rgb(var(--color-surface))',
-                  color: 'rgb(var(--color-text-primary))',
-                  borderColor: 'rgb(var(--color-border))'
-                }}
-                placeholder="Nom de l'événement"
-                required
-              />
-            </div>
+          <h2
+            className="text-xl font-bold"
+            style={{ color: 'rgb(var(--color-text-primary))' }}>
 
-            {/* Planification */}
-            <div
-              className="p-4 rounded-lg border transition-colors"
-              style={{
-                backgroundColor: 'rgb(var(--color-hover))',
-                borderColor: 'rgb(var(--color-border))'
-              }}
-            >
-              <h3
-                className="text-sm font-semibold mb-3 flex items-center gap-2"
-                style={{ color: 'rgb(var(--color-text-secondary))' }}
-              >
-                <Clock size={16} className="text-blue-600 dark:text-blue-400" />
-                Planification
-              </h3>
+            Ajouter un événement
+          </h2>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Début */}
-                <div
-                  className="p-3 rounded-lg border transition-colors"
-                  style={{
-                    backgroundColor: 'rgb(var(--color-surface))',
-                    borderColor: 'rgb(var(--color-border))'
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: 'rgb(var(--color-text-secondary))' }}
-                    >
-                      Début
-                    </span>
-                    {startTime && (
-                      <span className="text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded">
-                        {formatTimeDisplay(startTime)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                      style={{
-                        backgroundColor: 'rgb(var(--color-surface))',
-                        color: 'rgb(var(--color-text-primary))',
-                        borderColor: 'rgb(var(--color-border))'
-                      }}
-                      required
-                    />
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full px-2 py-2 border rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                      style={{
-                        backgroundColor: 'rgb(var(--color-surface))',
-                        color: 'rgb(var(--color-text-primary))',
-                        borderColor: 'rgb(var(--color-border))'
-                      }}
-                      required
-                    />
-                  </div>
-                </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'rgb(var(--color-text-muted))' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'rgb(var(--color-text-primary))';
+              e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'rgb(var(--color-text-muted))';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            aria-label="Fermer">
 
-                {/* Fin */}
-                <div
-                  className="p-3 rounded-lg border transition-colors"
-                  style={{
-                    backgroundColor: 'rgb(var(--color-surface))',
-                    borderColor: 'rgb(var(--color-border))'
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: 'rgb(var(--color-text-secondary))' }}
-                    >
-                      Fin
-                    </span>
-                    {endTime && (
-                      <span className="text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded">
-                        {formatTimeDisplay(endTime)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2 py-2 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                      style={{
-                        backgroundColor: 'rgb(var(--color-surface))',
-                        color: 'rgb(var(--color-text-primary))',
-                        borderColor: 'rgb(var(--color-border))'
-                      }}
-                      required
-                    />
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full px-2 py-2 border rounded text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                      style={{
-                        backgroundColor: 'rgb(var(--color-surface))',
-                        color: 'rgb(var(--color-text-primary))',
-                        borderColor: 'rgb(var(--color-border))'
-                      }}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {calculateDuration() && (
-                <div className="mt-3 text-center">
-                  <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
-                    <Clock size={14} />
-                    <span>Durée : {calculateDuration()}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label
-                className="block text-sm font-semibold mb-2"
-                style={{ color: 'rgb(var(--color-text-secondary))' }}
-              >
-                 Description
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-colors"
-                style={{
-                  backgroundColor: 'rgb(var(--color-surface))',
-                  color: 'rgb(var(--color-text-primary))',
-                  borderColor: 'rgb(var(--color-border))'
-                }}
-                placeholder="Description de l'événement (optionnel)"
-              />
-            </div>
-          </div>
-
-          {/* Colonne droite */}
-          <div className="col-span-5 space-y-4">
-            {/* Couleur */}
-            <div>
-              <label
-                className="block text-sm font-semibold mb-3"
-                style={{ color: 'rgb(var(--color-text-secondary))' }}
-              >
-                 Couleur de l'événement
-              </label>
-
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {colorOptions.map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setColor(option.value)}
-                    className="relative w-full h-12 rounded-lg border-2 transition-all hover:scale-105"
-                    style={{
-                      backgroundColor: option.color,
-                      borderColor:
-                        color === option.value
-                          ? 'rgb(var(--color-text-primary))'
-                          : 'rgb(var(--color-border))',
-                      boxShadow: color === option.value ? '0 4px 10px rgba(0,0,0,0.15)' : 'none'
-                    }}
-                    title={option.name}
-                  >
-                    {color === option.value && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{
-                            backgroundColor: 'rgb(var(--color-surface))',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
-                          }}
-                        />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div
-                className="flex items-center gap-2 justify-center p-2 rounded-lg"
-                style={{ backgroundColor: 'rgb(var(--color-hover))' }}
-              >
-                <div
-                  className="w-4 h-4 rounded-full border"
-                  style={{ backgroundColor: color, borderColor: 'rgb(var(--color-border))' }}
-                />
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: 'rgb(var(--color-text-secondary))' }}
-                >
-                  {colorOptions.find(opt => opt.value === color)?.name}
-                </span>
-              </div>
-            </div>
-
-            {/* Aperçu */}
-            <div
-              className="p-4 rounded-lg border transition-colors"
-              style={{
-                backgroundColor: 'rgb(var(--color-hover))',
-                borderColor: 'rgb(var(--color-border))'
-              }}
-            >
-              <h4
-                className="text-sm font-semibold mb-3"
-                style={{ color: 'rgb(var(--color-text-secondary))' }}
-              >
-                 Aperçu
-              </h4>
-              <div
-                className="p-3 rounded-lg text-white text-center font-medium shadow-sm"
-                style={{ backgroundColor: color }}
-              >
-                {title || "Nom de l'événement"}
-              </div>
-              {calculateDuration() && (
-                <div
-                  className="text-xs text-center mt-2"
-                  style={{ color: 'rgb(var(--color-text-muted))' }}
-                >
-                  {calculateDuration()}
-                </div>
-              )}
-            </div>
-
-            {/* Bouton */}
-            <div className="pt-4">
-              <button
-                type="submit"
-                className="w-full px-6 py-4 rounded-lg font-semibold text-lg transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 bg-green-600 hover:bg-green-700 text-white"
-              >
-                 Valider
-              </button>
-            </div>
-          </div>
+            <X size={20} />
+          </button>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} className="p-4 md:p-5 overflow-y-auto max-h-[85vh] md:max-h-none">
+          <div className="flex flex-col md:grid md:grid-cols-12 gap-5">
+            {/* Colonne gauche */}
+            <div className="md:col-span-7 space-y-3">
+              {/* Titre */}
+              <div>
+                <label
+                  className="block text-sm font-semibold mb-1 !whitespace-pre-line"
+                  style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                  Titre de l'événement
+
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => handleFieldChange('title', setTitle, e.target.value)}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    prefilledFields.has('title') ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : ''
+                  }`}
+                  style={{
+                    backgroundColor: prefilledFields.has('title') ? undefined : 'rgb(var(--color-surface))',
+                    color: 'rgb(var(--color-text-primary))',
+                    borderColor: prefilledFields.has('title') ? undefined : 'rgb(var(--color-border))'
+                  }}
+                  placeholder="Nom de l'événement"
+                  required />
+
+              </div>
+
+                {/* Planification */}
+                <div
+                  className="p-2 rounded-xl border transition-colors"
+                  style={{
+                    borderColor: 'rgb(var(--color-border))'
+                  }}>
+
+                  <div className="grid grid-cols-1 gap-1">
+                    {/* Début */}
+                    <div 
+                      className="group p-2 rounded-lg"
+                      style={{ backgroundColor: 'rgb(var(--color-surface))' }}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span
+                            className="text-sm font-semibold"
+                            style={{ color: 'rgb(var(--color-text-primary))' }}>
+
+                            Date & Heure de début
+                          </span>
+                        </div>
+                          {startTime &&
+                            <span
+                              className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border transition-colors ${
+                                prefilledFields.has('startTime') ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                              }`}
+                              style={{
+                                color: 'rgb(var(--color-success))',
+                                borderColor: 'rgba(var(--color-success), 0.2)'
+                              }}>
+                              {formatTimeDisplay(startTime)}
+                            </span>
+                          }
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="relative flex-1">
+                              <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => handleFieldChange('startDate', setStartDate, e.target.value)}
+                                placeholder="dd/mm/aaaa"
+                                className={`w-full px-3 py-2.5 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 ${
+                                  prefilledFields.has('startDate') ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : ''
+                                }`}
+                                style={{
+                                  backgroundColor: prefilledFields.has('startDate') ? undefined : 'rgb(var(--color-surface))',
+                                  color: 'rgb(var(--color-text-primary))',
+                                  borderColor: prefilledFields.has('startDate') ? undefined : 'rgb(var(--color-border))'
+                                }}
+                                required />
+                          </div>
+
+                          <div className="relative w-full sm:w-36">
+                            <input
+                              type="time"
+                              value={startTime}
+                              onChange={(e) => handleFieldChange('startTime', setStartTime, e.target.value)}
+                              placeholder="hh:mm"
+                              className={`w-full px-3 py-2.5 border rounded-lg text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 ${
+                                prefilledFields.has('startTime') ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : ''
+                              }`}
+                              style={{
+                                backgroundColor: prefilledFields.has('startTime') ? undefined : 'rgb(var(--color-surface))',
+                                color: 'rgb(var(--color-text-primary))',
+                                borderColor: prefilledFields.has('startTime') ? undefined : 'rgb(var(--color-border))'
+                              }}
+                              required />
+                          </div>
+                      </div>
+                    </div>
+
+                    {/* Fin */}
+                    <div 
+                      className="group p-2 rounded-lg"
+                      style={{ backgroundColor: 'rgb(var(--color-surface))' }}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span
+                            className="text-sm font-semibold"
+                            style={{ color: 'rgb(var(--color-text-primary))' }}>
+
+                            Date & Heure de fin
+                          </span>
+                        </div>
+                          {endTime &&
+                            <span
+                              className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border transition-colors ${
+                                prefilledFields.has('endTime') ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                              }`}
+                              style={{
+                                color: 'rgb(var(--color-error))',
+                                borderColor: 'rgba(var(--color-error), 0.2)'
+                              }}>
+                              {formatTimeDisplay(endTime)}
+                            </span>
+                          }
+                      </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                              <div className="relative flex-1">
+                                <input
+                                  type="date"
+                                  value={endDate}
+                                  onChange={(e) => handleFieldChange('endDate', setEndDate, e.target.value)}
+                                  placeholder="dd/mm/aaaa"
+                                  className={`w-full px-3 py-2.5 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 ${
+                                    prefilledFields.has('endDate') ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : ''
+                                  }`}
+                                  style={{
+                                    backgroundColor: prefilledFields.has('endDate') ? undefined : 'rgb(var(--color-surface))',
+                                    color: 'rgb(var(--color-text-primary))',
+                                    borderColor: prefilledFields.has('endDate') ? undefined : 'rgb(var(--color-border))'
+                                  }}
+                                  required />
+                              </div>
+
+                              <div className="relative w-full sm:w-36">
+                                <input
+                                  type="time"
+                                  value={endTime}
+                                  onChange={(e) => handleFieldChange('endTime', setEndTime, e.target.value)}
+                                  placeholder="hh:mm"
+                                  className={`w-full px-3 py-2.5 border rounded-lg text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 ${
+                                    prefilledFields.has('endTime') ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : ''
+                                  }`}
+                                  style={{
+                                    backgroundColor: prefilledFields.has('endTime') ? undefined : 'rgb(var(--color-surface))',
+                                    color: 'rgb(var(--color-text-primary))',
+                                    borderColor: prefilledFields.has('endTime') ? undefined : 'rgb(var(--color-border))'
+                                  }}
+                                  required />
+                              </div>
+                          </div>
+                    </div>
+                  </div>
+
+                  {calculateDuration() &&
+                    <div className="mt-3.5 pt-2.5 border-t border-dashed border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500">Durée totale</span>
+                        <div className="flex items-center gap-2 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                          <Clock size={12} />
+                          <span>{calculateDuration()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+              {/* Notes */}
+              <div>
+                <label
+                  className="block text-sm font-semibold mb-1"
+                  style={{ color: 'rgb(var(--color-text-secondary))' }}>
+
+                   Description
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => handleFieldChange('notes', setNotes, e.target.value)}
+                  rows={6}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-colors text-sm ${
+                    prefilledFields.has('notes') ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : ''
+                  }`}
+                  style={{
+                    backgroundColor: prefilledFields.has('notes') ? undefined : 'rgb(var(--color-surface))',
+                    color: 'rgb(var(--color-text-primary))',
+                    borderColor: prefilledFields.has('notes') ? undefined : 'rgb(var(--color-border))'
+                  }}
+                  placeholder="Description de l'événement" />
+
+              </div>
+            </div>
+
+            {/* Colonne droite */}
+            <div className="md:col-span-5 space-y-3">
+              {/* Couleur */}
+              <div>
+                <label
+                    className="flex justify-between items-center text-sm font-semibold mb-2"
+                    style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                    <span>Couleur de l'événement</span>
+                    <Plus 
+                      className="w-4 h-4 text-blue-500 cursor-pointer hover:scale-125 transition-transform" 
+                      onClick={() => setIsColorSettingsOpen(true)}
+                    />
+                </label>
+
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {favoriteColors.map((favColor, index) => (
+                    <button
+                      key={`${favColor}-${index}`}
+                      type="button"
+                      onClick={() => handleFieldChange('color', setColor, favColor)}
+                      className="relative w-full h-10 rounded-lg border-2 transition-all hover:scale-105"
+                      style={{
+                        backgroundColor: favColor,
+                        borderColor:
+                        color === favColor ?
+                        'rgb(var(--color-text-primary))' :
+                        'rgb(var(--color-border))',
+                        boxShadow: color === favColor ? '0 4px 10px rgba(0,0,0,0.15)' : 'none'
+                      }}>
+
+                        {color === favColor && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div
+                              className="w-3.5 h-3.5 rounded-full"
+                              style={{
+                                backgroundColor: 'rgb(var(--color-surface))',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
+                              }} 
+                            />
+                          </div>
+                        )}
+                    </button>
+                  ))}
+                </div>
+
+                {categories.length > 0 &&
+                <div
+                  className="p-2.5 rounded-xl border bg-opacity-30 transition-colors"
+                  style={{
+                    borderColor: 'rgb(var(--color-border))'
+                  }}>
+
+                    <h4
+                      className="text-[12px] font-bold uppercase tracking-widest mb-2"
+                      style={{ color: 'rgb(var(--color-text-muted))' }}>
+                      Légende des catégories
+                    </h4>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                      {categories.map((cat) =>
+                      <div key={cat.id} className="flex items-center gap-1.5">
+                          <div
+                          className="w-2 h-2 rounded-full shadow-sm"
+                          style={{ backgroundColor: cat.color }} />
+
+                          <span
+                          className="text-[13px] font-medium truncate"
+                          style={{ color: 'rgb(var(--color-text-primary))' }}>
+                          {cat.name}
+                        </span>
+                        </div>
+                      )}
+                    </div>
+                    </div>
+                    }
+                  </div>
+
+                  {/* Aperçu */}
+                  <div 
+                    className="p-3 rounded-xl border transition-colors"
+                    style={{ 
+                      borderColor: 'rgb(var(--color-border))'
+                    }}>
+                    <h4 
+                      className="text-xs font-semibold mb-2" 
+                      style={{ color: 'rgb(var(--color-text-primary))' }}>
+                      Aperçu
+                    </h4>
+                    <div
+                      className="p-2.5 rounded-lg text-white text-center text-sm font-medium shadow-sm transition-transform hover:scale-[1.02]"
+                      style={{ backgroundColor: color }}>
+                      {title || 'Nom de l\'événement'}
+                    </div>
+                      {calculateDuration() && (
+                        <div 
+                          className="text-[12px] text-center mt-1.5" 
+                          style={{ color: 'rgb(var(--color-text-muted))' }}>
+                          {calculateDuration()}
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Boutons */}
+                  <div className="pt-2 space-y-2">
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/25 transform transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">
+                       Valider
+                    </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full px-4 py-2 rounded-lg border text-sm font-medium transition-colors"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: 'rgb(var(--color-border))',
+                      color: 'rgb(var(--color-text-secondary))'
+                    }}>
+
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+      
+      <ColorSettingsModal 
+        isOpen={isColorSettingsOpen} 
+        onClose={() => setIsColorSettingsOpen(false)} 
+      />
     </div>
   );
 };
-
-export default AddEventModal;
 
 export default AddEventModal;
