@@ -14,7 +14,7 @@ import SettingsPage from './pages/SettingsPage';
 import { TaskProvider, useTasks } from './context/TaskContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 import { BrowserRouter } from 'react-router-dom';
 import HoverReceiver from "@/visual-edits/VisualEditsMessenger";
 
@@ -49,13 +49,13 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TaskProvider>
-      <TooltipProvider>
-        <Toaster />
-        <HoverReceiver />
+    <TooltipProvider>
+      <Toaster />
+      <HoverReceiver />
+      <BrowserRouter>
         <AppContent />
-      </TooltipProvider>
-    </TaskProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
