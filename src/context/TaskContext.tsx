@@ -165,6 +165,9 @@ type TaskContextType = {
   updateKeyResult: (okrId: string, keyResultId: string, updates: Partial<KeyResult>) => void;
   deleteOKR: (id: string) => void;
   updateUserSettings: (updates: Partial<User>) => void;
+  addCategory: (category: Category) => void;
+  updateCategory: (id: string, updates: Partial<Category>) => void;
+  deleteCategory: (id: string) => void;
 };
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
