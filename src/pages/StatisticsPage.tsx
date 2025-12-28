@@ -4,18 +4,45 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Clock, TrendingUp, Calendar, ChevronDown, Target, CheckSquare, Repeat, CalendarDays } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 
-type StatSection = 'tasks' | 'agenda' | 'okr' | 'habits';
+type StatSection = 'all' | 'tasks' | 'agenda' | 'okr' | 'habits';
 type TimePeriod = 'day' | 'week' | 'month' | 'year';
 
+// Helper for parsing date string as a local Date object
+const parseLocalDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  if (dateStr.includes('T')) {
+    return new Date(dateStr);
+  }
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
+// Helper for formatting date as "YYYY-MM-DD" in local time
+const getLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function StatisticsPage() {
-  const { tasks, events, colorSettings } = useTasks();
-  const [selectedSection, setSelectedSection] = useState<StatSection>('tasks');
+  const { tasks, events, colorSettings, okrs, habits } = useTasks();
+  const [selectedSection, setSelectedSection] = useState<StatSection>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('week');
   const [showReferenceBar, setShowReferenceBar] = useState(true);
   const [referenceValue, setReferenceValue] = useState(60);
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartWidth, setChartWidth] = useState(800);
+  const [now, setNow] = useState(new Date());
+
+  // Update current time every minute to keep "today" reference fresh
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const updateWidth = () => {
@@ -28,22 +55,16 @@ export default function StatisticsPage() {
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  const mockHabits = [
-    { id: '1', name: 'Lire 30 minutes', estimatedTime: 30, completions: { '2025-01-15': true, '2025-01-14': true } },
-    { id: '2', name: 'Exercice physique', estimatedTime: 60, completions: { '2025-01-15': true } }
-  ];
-
-  const mockOKRs = [
-    { id: '1', title: 'Améliorer français', estimatedTime: 180, keyResults: [{ estimatedTime: 60 }, { estimatedTime: 90 }] },
-    { id: '2', title: 'Optimiser productivité', estimatedTime: 120, keyResults: [{ estimatedTime: 60 }, { estimatedTime: 60 }] }
-  ];
-
   const getPeriodDetails = (period: TimePeriod, periodDate: Date) => {
     const details = {
       completedTasks: [] as any[],
       events: [] as any[],
       habits: [] as any[],
-      totalTime: 0
+      totalTime: 0,
+      tasksTime: 0,
+      eventsTime: 0,
+      habitsTime: 0,
+      okrTime: 0
     };
 
     let startDate: Date, endDate: Date;
@@ -72,127 +93,216 @@ export default function StatisticsPage() {
 
     details.completedTasks = tasks.filter(task => {
       if (!task.completed || !task.completedAt) return false;
-      const taskDate = new Date(task.completedAt);
+      const taskDate = parseLocalDate(task.completedAt);
       return taskDate >= startDate && taskDate <= endDate;
     });
 
     details.events = events.filter(event => {
-      const eventDate = new Date(event.start);
+      const eventDate = parseLocalDate(event.start);
       return eventDate >= startDate && eventDate <= endDate;
     });
 
-    details.habits = mockHabits.filter(habit => {
-      return Object.keys(habit.completions).some(date => {
-        const habitDate = new Date(date);
-        return habitDate >= startDate && habitDate <= endDate && habit.completions[date];
+    details.habitsTime = habits.reduce((total, habit) => {
+      const completionsInPeriod = Object.keys(habit.completions).filter(date => {
+        const hDate = parseLocalDate(date);
+        const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+        const startNormalized = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endNormalized = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        return hDateNormalized >= startNormalized && hDateNormalized <= endNormalized && habit.completions[date];
+      }).length;
+      return total + (completionsInPeriod * habit.estimatedTime);
+    }, 0);
+
+    details.okrTime = 0;
+    okrs.forEach(okr => {
+      okr.keyResults.forEach(kr => {
+        const historyInPeriod = (kr.history || []).filter(h => {
+          const hDate = parseLocalDate(h.date);
+          const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+          const startNormalized = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+          const endNormalized = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          return hDateNormalized >= startNormalized && hDateNormalized <= endNormalized;
+        });
+        const totalIncrements = historyInPeriod.reduce((sum, h) => sum + h.increment, 0);
+        details.okrTime += totalIncrements * kr.estimatedTime;
       });
     });
 
-    details.totalTime += details.completedTasks.reduce((sum, task) => sum + task.estimatedTime, 0);
+    details.tasksTime = details.completedTasks.reduce((sum, task) => sum + task.estimatedTime, 0);
     
+    details.eventsTime = 0;
     details.events.forEach(event => {
       const start = new Date(event.start);
       const end = new Date(event.end);
       const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-      details.totalTime += durationMinutes;
+      details.eventsTime += durationMinutes;
     });
 
-    details.habits.forEach(habit => {
-      const habitCompletions = Object.keys(habit.completions).filter(date => {
-        const habitDate = new Date(date);
-        return habitDate >= startDate && habitDate <= endDate && habit.completions[date];
-      });
-      details.totalTime += habitCompletions.length * habit.estimatedTime;
-    });
+    details.totalTime = details.tasksTime + details.eventsTime + details.habitsTime + details.okrTime;
 
     return details;
   };
 
-  const calculateWorkTime = (period: TimePeriod) => {
-    const now = new Date();
-    let periods = [];
+    const calculateWorkTime = (period: TimePeriod) => {
+      const periods = [];
 
-    switch (period) {
-      case 'day':
-        for (let i = 9; i >= 0; i--) {
-          const date = new Date(now);
-          date.setDate(date.getDate() - i);
-          periods.push({
-            label: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-            date: date.toISOString().split('T')[0],
-            fullDate: date
-          });
-        }
-        break;
-      case 'week':
-        for (let i = 11; i >= 0; i--) {
-          const date = new Date(now);
-          date.setDate(date.getDate() - (i * 7));
-          const weekStart = new Date(date);
-          weekStart.setDate(date.getDate() - date.getDay());
-          
-          const startOfYear = new Date(weekStart.getFullYear(), 0, 1);
-          const weekNumber = Math.ceil(((weekStart.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-          
-          periods.push({
-            label: `S${weekNumber}`,
-            date: weekStart.toISOString().split('T')[0],
-            fullDate: weekStart,
-            weekNumber: weekNumber
-          });
-        }
-        break;
-      case 'month':
-        for (let i = 11; i >= 0; i--) {
-          const date = new Date(now);
-          date.setMonth(date.getMonth() - i);
-          periods.push({
-            label: date.toLocaleDateString('fr-FR', { month: 'short' }),
-            date: date.toISOString().split('T')[0],
-            fullDate: date
-          });
-        }
-        break;
-      case 'year':
-        for (let i = 4; i >= 0; i--) {
-          const date = new Date(now);
-          date.setFullYear(date.getFullYear() - i);
-          periods.push({
-            label: date.getFullYear().toString(),
-            date: date.toISOString().split('T')[0],
-            fullDate: date
-          });
-        }
-        break;
-    }
-
-    return periods.map((p, index) => {
-      const periodDetails = getPeriodDetails(period, p.fullDate);
-      
-      let simulatedTime = 0;
-      if (periodDetails.totalTime < 10) {
-        const baseTime = 45;
-        const variation = Math.sin((index * Math.PI) / (periods.length - 1)) * 30;
-        const randomFactor = (Math.random() - 0.5) * 20;
-        simulatedTime = Math.max(0, baseTime + variation + randomFactor);
+      switch (period) {
+        case 'day':
+          for (let i = 9; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            periods.push({
+              label: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+              date: getLocalDateString(date),
+              fullDate: date
+            });
+          }
+          break;
+        case 'week':
+          for (let i = 11; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - (i * 7));
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - (date.getDay() === 0 ? 6 : date.getDay() - 1));
+            
+            const startOfYear = new Date(weekStart.getFullYear(), 0, 1);
+            const weekNumber = Math.ceil(((weekStart.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+            
+            periods.push({
+              label: `S${weekNumber}`,
+              date: getLocalDateString(weekStart),
+              fullDate: weekStart,
+              weekNumber: weekNumber
+            });
+          }
+          break;
+        case 'month':
+          for (let i = 11; i >= 0; i--) {
+            const date = new Date(now);
+            date.setMonth(date.getMonth() - i);
+            periods.push({
+              label: date.toLocaleDateString('fr-FR', { month: 'short' }),
+              date: getLocalDateString(date),
+              fullDate: date
+            });
+          }
+          break;
+        case 'year':
+          for (let i = 4; i >= 0; i--) {
+            const date = new Date(now);
+            date.setFullYear(date.getFullYear() - i);
+            periods.push({
+              label: date.getFullYear().toString(),
+              date: getLocalDateString(date),
+              fullDate: date
+            });
+          }
+          break;
       }
 
-      const totalTime = Math.round(Math.max(periodDetails.totalTime, simulatedTime));
+      return periods.map((p, index) => {
+        const periodDetails = getPeriodDetails(period, p.fullDate);
+        
+        let relevantTime = 0;
+        if (selectedSection === 'tasks') relevantTime = periodDetails.tasksTime;
+        else if (selectedSection === 'agenda') relevantTime = periodDetails.eventsTime;
+        else if (selectedSection === 'habits') relevantTime = periodDetails.habitsTime;
+        else if (selectedSection === 'okr') relevantTime = periodDetails.okrTime;
+        else relevantTime = periodDetails.totalTime;
 
-      return {
-        ...p,
-        totalTime: totalTime,
-        hours: Math.floor(totalTime / 60),
-        minutes: Math.round(totalTime % 60),
-        details: periodDetails,
-        index
+        const finalTime = Math.round(relevantTime);
+
+        return {
+          ...p,
+          totalTime: finalTime,
+          hours: Math.floor(finalTime / 60),
+          minutes: Math.round(finalTime % 60),
+          details: periodDetails,
+          index
+        };
+      });
+    };
+
+    const workTimeData = React.useMemo(() => calculateWorkTime(selectedPeriod), [selectedPeriod, selectedSection, tasks, events, habits, okrs, now]);
+    
+    // Calculate the rolling range matching the descriptive text below the chart
+    const rollingRange = React.useMemo(() => {
+      // Create 'today' at 00:00:00 local time
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const start = new Date(today);
+      const end = new Date(today);
+      end.setHours(23, 59, 59, 999);
+
+      if (selectedPeriod === 'week') start.setDate(today.getDate() - 6);
+      else if (selectedPeriod === 'month') start.setDate(today.getDate() - 29);
+      else if (selectedPeriod === 'year') start.setDate(today.getDate() - 364);
+
+      return { start, end };
+    }, [selectedPeriod, now]);
+
+    const rollingTasks = React.useMemo(() => {
+      return tasks.filter(task => {
+        if (!task.completed || !task.completedAt) return false;
+        const d = parseLocalDate(task.completedAt);
+        return d >= rollingRange.start && d <= rollingRange.end;
+      });
+    }, [tasks, rollingRange]);
+
+    const rollingEvents = React.useMemo(() => {
+      return events.filter(event => {
+        const d = parseLocalDate(event.start);
+        return d >= rollingRange.start && d <= rollingRange.end;
+      });
+    }, [events, rollingRange]);
+
+    const rollingWorkTimeData = React.useMemo(() => {
+      // Create a single period detail for the rolling range for OverviewStatistics
+      const details = {
+        completedTasks: rollingTasks,
+        events: rollingEvents,
+        totalTime: 0,
+        tasksTime: 0,
+        eventsTime: 0,
+        habitsTime: 0,
+        okrTime: 0
       };
-    });
-  };
 
-  const workTimeData = React.useMemo(() => calculateWorkTime(selectedPeriod), [selectedPeriod, tasks, events]);
-  
-  const totalWorkTime = workTimeData.reduce((sum, d) => sum + d.totalTime, 0);
+      details.tasksTime = rollingTasks.reduce((sum, task) => sum + task.estimatedTime, 0);
+      details.eventsTime = rollingEvents.reduce((sum, event) => {
+        const start = new Date(event.start);
+        const end = new Date(event.end);
+        return sum + (end.getTime() - start.getTime()) / (1000 * 60);
+      }, 0);
+
+      // Habits time for rolling range
+      details.habitsTime = habits.reduce((total, habit) => {
+        const completionsInRange = Object.keys(habit.completions).filter(date => {
+          const hDate = parseLocalDate(date);
+          const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+          return hDateNormalized >= rollingRange.start && hDateNormalized <= rollingRange.end && habit.completions[date];
+        }).length;
+        return total + (completionsInRange * habit.estimatedTime);
+      }, 0);
+
+      // OKR time for rolling range
+      okrs.forEach(okr => {
+        okr.keyResults.forEach(kr => {
+          const historyInRange = (kr.history || []).filter(h => {
+            const hDate = parseLocalDate(h.date);
+            const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+            return hDateNormalized >= rollingRange.start && hDateNormalized <= rollingRange.end;
+          });
+          const totalIncrements = historyInRange.reduce((sum, h) => sum + h.increment, 0);
+          details.okrTime += totalIncrements * kr.estimatedTime;
+        });
+      });
+
+      details.totalTime = details.tasksTime + details.eventsTime + details.habitsTime + details.okrTime;
+
+      return [{ details }];
+    }, [rollingTasks, rollingEvents, habits, okrs, rollingRange]);
+    
+    const totalWorkTime = workTimeData.reduce((sum, d) => sum + d.totalTime, 0);
   const avgWorkTime = workTimeData.length > 0 ? Math.round(totalWorkTime / workTimeData.length) : 0;
   const maxWorkTime = Math.max(...workTimeData.map(d => d.totalTime), 1);
 
@@ -205,10 +315,10 @@ export default function StatisticsPage() {
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
+    const mins = Math.round(minutes % 60);
     if (hours === 0) return `${mins}min`;
     if (mins === 0) return `${hours}h`;
-    return `${hours}h${mins}min`;
+    return `${hours}h${mins < 10 ? '0' : ''}${mins}`;
   };
 
   const formatTimeShort = (minutes: number) => {
@@ -218,28 +328,31 @@ export default function StatisticsPage() {
 
   const generateSmartYScale = (maxValue: number, refValue: number) => {
     const maxDisplayValue = Math.max(maxValue, refValue, 15);
-    
     let step;
     if (maxDisplayValue <= 30) step = 15;
     else if (maxDisplayValue <= 60) step = 30;
     else if (maxDisplayValue <= 120) step = 30;
     else if (maxDisplayValue <= 240) step = 60;
     else step = Math.ceil(maxDisplayValue / 6 / 60) * 60;
-    
     const scaleMax = Math.ceil((maxDisplayValue * 1.2) / step) * step;
-    
     const ticks = [];
-    for (let i = 0; i <= scaleMax; i += step) {
-      ticks.push(i);
-    }
-    
+    for (let i = 0; i <= scaleMax; i += step) ticks.push(i);
     return { ticks, max: scaleMax, step };
   };
 
-  const yScale = React.useMemo(() => generateSmartYScale(maxWorkTime, referenceValue), [maxWorkTime, referenceValue]);
-  const chartHeight = 350;
+    const yScale = React.useMemo(() => generateSmartYScale(maxWorkTime, referenceValue), [maxWorkTime, referenceValue]);
+    const chartHeight = 350;
 
-  const sections = [
+    const periodDescriptiveText = {
+      day: "aujourd'hui",
+      week: "7 derniers jours",
+      month: "30 derniers jours",
+      year: "365 derniers jours"
+    };
+
+    const sections = [
+
+    { id: 'all', label: 'Vue d\'ensemble', icon: BarChart3 },
     { id: 'tasks', label: 'Tâches', icon: CheckSquare },
     { id: 'agenda', label: 'Agenda', icon: CalendarDays },
     { id: 'okr', label: 'OKR', icon: Target },
@@ -263,115 +376,60 @@ export default function StatisticsPage() {
   const barWidth = Math.min(40, (chartInnerWidth / workTimeData.length) * 0.6);
   const barGap = (chartInnerWidth - barWidth * workTimeData.length) / (workTimeData.length + 1);
 
-  const getBarHeight = (value: number) => {
-    return (value / yScale.max) * chartInnerHeight;
-  };
-
-  const getBarY = (value: number) => {
-    return paddingTop + chartInnerHeight - getBarHeight(value);
-  };
-
-  const getBarX = (index: number) => {
-    return paddingLeft + barGap + index * (barWidth + barGap);
-  };
+  const getBarHeight = (value: number) => (value / yScale.max) * chartInnerHeight;
+  const getBarY = (value: number) => paddingTop + chartInnerHeight - getBarHeight(value);
+  const getBarX = (index: number) => paddingLeft + barGap + index * (barWidth + barGap);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto" style={{ backgroundColor: 'rgb(var(--color-background))' }}>
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Statistiques
-        </h1>
-        <p style={{ color: 'rgb(var(--color-text-secondary))' }}>
-          Analysez votre productivité et vos performances
-        </p>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: 'rgb(var(--color-text-primary))' }}>Statistiques</h1>
+        <p style={{ color: 'rgb(var(--color-text-secondary))' }}>Analysez votre productivité et vos performances</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="card p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-              <Clock size={22} className="text-blue-500" />
-            </div>
-            <div>
-              <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>Aujourd'hui</p>
-              <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(globalStats.today)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-              <Calendar size={22} className="text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>Cette semaine</p>
-              <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(globalStats.week)}</p>
+        {[
+          { icon: Clock, label: "Aujourd'hui", val: globalStats.today, color: 'blue' },
+          { icon: Calendar, label: "Cette semaine", val: globalStats.week, color: 'emerald' },
+          { icon: BarChart3, label: "Ce mois", val: globalStats.month, color: 'orange' },
+          { icon: TrendingUp, label: "Cette année", val: globalStats.year, color: 'violet' }
+        ].map((s, idx) => (
+          <div key={idx} className="card p-5">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl bg-${s.color}-500/10`}>
+                <s.icon size={22} className={`text-${s.color}-500`} />
+              </div>
+              <div>
+                <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>{s.label}</p>
+                <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(s.val)}</p>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(249, 115, 22, 0.1)' }}>
-              <BarChart3 size={22} className="text-orange-500" />
-            </div>
-            <div>
-              <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>Ce mois</p>
-              <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(globalStats.month)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
-              <TrendingUp size={22} className="text-violet-500" />
-            </div>
-            <div>
-              <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>Cette année</p>
-              <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(globalStats.year)}</p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-4 mb-4">
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-4">
           <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Analyser :</span>
           <div className="relative">
             <select
               value={selectedSection}
               onChange={(e) => setSelectedSection(e.target.value as StatSection)}
-              className="appearance-none rounded-lg pl-4 pr-10 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-              style={{
-                backgroundColor: 'rgb(var(--color-surface))',
-                border: '1px solid rgb(var(--color-border))',
-                color: 'rgb(var(--color-text-primary))'
-              }}
+              className="appearance-none rounded-lg pl-4 pr-10 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all border border-border bg-surface text-primary"
+              style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-text-primary))' }}
             >
-              {sections.map(section => (
-                <option key={section.id} value={section.id}>
-                  {section.label}
-                </option>
-              ))}
+              {sections.map(section => <option key={section.id} value={section.id}>{section.label}</option>)}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2" style={{ color: 'rgb(var(--color-text-muted))' }}>
-              <ChevronDown size={16} />
-            </div>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground"><ChevronDown size={16} /></div>
           </div>
         </div>
 
-        <div className="flex rounded-xl p-1 w-fit" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
+        <div className="flex rounded-xl p-1 w-fit bg-hover" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
           {periods.map(period => (
             <button
               key={period.id}
               onClick={() => setSelectedPeriod(period.id as TimePeriod)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                selectedPeriod === period.id 
-                  ? 'shadow-sm' 
-                  : ''
-              }`}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${selectedPeriod === period.id ? 'shadow-sm' : ''}`}
               style={{
                 backgroundColor: selectedPeriod === period.id ? 'rgb(var(--color-surface))' : 'transparent',
                 color: selectedPeriod === period.id ? 'rgb(var(--color-text-primary))' : 'rgb(var(--color-text-secondary))'
@@ -387,475 +445,160 @@ export default function StatisticsPage() {
         <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
           <div>
             <h2 className="text-lg font-semibold mb-1" style={{ color: 'rgb(var(--color-text-primary))' }}>
-              Temps de travail {periods.find(p => p.id === selectedPeriod)?.label.toLowerCase()}
+              {selectedSection === 'agenda' ? 'Durée totale des événements' : 'Temps investi'} {periods.find(p => p.id === selectedPeriod)?.label.toLowerCase()}
             </h2>
-            <p className="text-sm" style={{ color: 'rgb(var(--color-text-muted))' }}>
-              Moyenne: {formatTime(avgWorkTime)} · Total: {formatTime(totalWorkTime)}
-            </p>
+            <p className="text-sm" style={{ color: 'rgb(var(--color-text-muted))' }}>Moyenne: {formatTime(avgWorkTime)} · Total: {formatTime(totalWorkTime)}</p>
           </div>
           
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showReferenceBar}
-                onChange={(e) => setShowReferenceBar(e.target.checked)}
-                className="w-4 h-4 rounded text-violet-500 focus:ring-violet-500"
-                style={{ accentColor: '#8B5CF6' }}
-              />
-              <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
-                Objectif
-              </span>
+              <input type="checkbox" checked={showReferenceBar} onChange={(e) => setShowReferenceBar(e.target.checked)} className="w-4 h-4 rounded" style={{ accentColor: '#8B5CF6' }} />
+              <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>Objectif</span>
             </label>
-            
             {showReferenceBar && (
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={referenceValue}
-                  onChange={(e) => setReferenceValue(Number(e.target.value))}
-                  min="5"
-                  max="480"
-                  step="5"
-                  className="w-16 px-2 py-1.5 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  style={{
-                    backgroundColor: 'rgb(var(--color-hover))',
-                    color: 'rgb(var(--color-text-primary))',
-                    border: '1px solid rgb(var(--color-border))'
-                  }}
-                />
+                <input type="number" value={referenceValue} onChange={(e) => setReferenceValue(Number(e.target.value))} min="5" max="480" step="5" className="w-16 px-2 py-1.5 text-sm rounded-lg border border-border bg-hover text-primary" style={{ backgroundColor: 'rgb(var(--color-hover))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-text-primary))' }} />
                 <span className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>min</span>
               </div>
             )}
           </div>
         </div>
 
-        <div 
-          ref={chartContainerRef}
-          className="relative rounded-xl overflow-hidden"
-          style={{ 
-            height: `${chartHeight}px`,
-            backgroundColor: 'rgb(var(--color-hover))'
-          }}
-        >
-          <svg width="100%" height="100%" className="overflow-visible">
-            <defs>
-              <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#8B5CF6" />
-                <stop offset="100%" stopColor="#6366F1" />
-              </linearGradient>
-              <linearGradient id="barGradientSuccess" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#10B981" />
-                <stop offset="100%" stopColor="#059669" />
-              </linearGradient>
-              <linearGradient id="barGradientWarning" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#F59E0B" />
-                <stop offset="100%" stopColor="#D97706" />
-              </linearGradient>
-            </defs>
-            
-            {yScale.ticks.map((tick) => {
-              const y = getBarY(tick);
-              return (
-                <g key={`grid-${tick}`}>
-                  <line
-                    x1={paddingLeft}
-                    y1={y}
-                    x2={chartWidth - paddingRight}
-                    y2={y}
-                    stroke="rgb(var(--color-border))"
-                    strokeWidth="1"
-                    strokeDasharray={tick === 0 ? "none" : "4,4"}
-                    opacity={tick === 0 ? 1 : 0.5}
-                  />
-                  <text
-                    x={paddingLeft - 10}
-                    y={y + 4}
-                    textAnchor="end"
-                    className="text-xs"
-                    fill="rgb(var(--color-text-muted))"
-                  >
-                    {formatTimeShort(tick)}
-                  </text>
+          <div ref={chartContainerRef} className="relative rounded-xl overflow-hidden bg-hover" style={{ height: `${chartHeight}px`, backgroundColor: 'rgb(var(--color-hover))' }}>
+            <svg width="100%" height="100%" className="overflow-visible">
+              <defs>
+                <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#6366F1" /></linearGradient>
+                <linearGradient id="barGradientSuccess" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#059669" /></linearGradient>
+                <linearGradient id="barGradientWarning" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
+              </defs>
+              {yScale.ticks.map((tick) => {
+                const y = getBarY(tick);
+                return (
+                  <g key={`grid-${tick}`}>
+                    <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="rgb(var(--color-border))" strokeWidth="1" strokeDasharray={tick === 0 ? "none" : "4,4"} opacity={tick === 0 ? 1 : 0.5} />
+                    <text x={paddingLeft - 10} y={y + 4} textAnchor="end" className="text-xs" fill="rgb(var(--color-text-muted))">{formatTimeShort(tick)}</text>
+                  </g>
+                );
+              })}
+              {showReferenceBar && referenceValue <= yScale.max && (
+                <g>
+                  <line x1={paddingLeft} y1={getBarY(referenceValue)} x2={chartWidth - paddingRight} y2={getBarY(referenceValue)} stroke="#F59E0B" strokeWidth="2" strokeDasharray="8,4" />
+                  <rect x={chartWidth - paddingRight - 60} y={getBarY(referenceValue) - 10} width="55" height="20" rx="4" fill="#F59E0B" />
+                  <text x={chartWidth - paddingRight - 32} y={getBarY(referenceValue) + 4} textAnchor="middle" className="text-xs font-medium" fill="white">{formatTimeShort(referenceValue)}</text>
                 </g>
-              );
-            })}
-            
-            {showReferenceBar && referenceValue <= yScale.max && (
-              <g>
-                <line
-                  x1={paddingLeft}
-                  y1={getBarY(referenceValue)}
-                  x2={chartWidth - paddingRight}
-                  y2={getBarY(referenceValue)}
-                  stroke="#F59E0B"
-                  strokeWidth="2"
-                  strokeDasharray="8,4"
-                />
-                <rect
-                  x={chartWidth - paddingRight - 60}
-                  y={getBarY(referenceValue) - 10}
-                  width="55"
-                  height="20"
-                  rx="4"
-                  fill="#F59E0B"
-                />
-                <text
-                  x={chartWidth - paddingRight - 32}
-                  y={getBarY(referenceValue) + 4}
-                  textAnchor="middle"
-                  className="text-xs font-medium"
-                  fill="white"
-                >
-                  {formatTime(referenceValue)}
-                </text>
-              </g>
-            )}
-            
-            {workTimeData.map((data, index) => {
-              const barHeight = getBarHeight(data.totalTime);
-              const barX = getBarX(index);
-              const barY = getBarY(data.totalTime);
-              const isAboveTarget = showReferenceBar && data.totalTime >= referenceValue;
-              const isBelowTarget = showReferenceBar && data.totalTime < referenceValue;
-              const isHovered = hoveredPoint === index;
-              
-              let gradientId = "barGradient";
-              if (showReferenceBar) {
-                gradientId = isAboveTarget ? "barGradientSuccess" : "barGradientWarning";
-              }
-              
-              return (
-                <g 
-                  key={index}
-                  onMouseEnter={() => setHoveredPoint(index)}
-                  onMouseLeave={() => setHoveredPoint(null)}
-                  className="cursor-pointer"
-                >
-                  <rect
-                    x={barX}
-                    y={barY}
-                    width={barWidth}
-                    height={Math.max(barHeight, 2)}
-                    rx="6"
-                    fill={`url(#${gradientId})`}
-                    opacity={isHovered ? 1 : 0.85}
-                    style={{
-                      transition: 'all 0.2s ease',
-                      transform: isHovered ? 'scaleY(1.02)' : 'scaleY(1)',
-                      transformOrigin: 'bottom'
-                    }}
-                  />
-                  
-                  {isHovered && (
-                    <text
-                      x={barX + barWidth / 2}
-                      y={barY - 8}
-                      textAnchor="middle"
-                      className="text-xs font-semibold"
-                      fill="rgb(var(--color-text-primary))"
-                    >
-                      {formatTime(data.totalTime)}
-                    </text>
-                  )}
-                  
-                  <text
-                    x={barX + barWidth / 2}
-                    y={chartHeight - paddingBottom + 20}
-                    textAnchor="middle"
-                    className="text-xs"
-                    fill="rgb(var(--color-text-muted))"
-                  >
-                    {data.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-
-        <div className="flex flex-wrap justify-between items-center mt-4 pt-4 border-t" style={{ borderColor: 'rgb(var(--color-border))' }}>
-          <div className="flex items-center gap-6 text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
-            {showReferenceBar && (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded" style={{ background: 'linear-gradient(180deg, #10B981, #059669)' }}></div>
-                  <span>Objectif atteint</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded" style={{ background: 'linear-gradient(180deg, #F59E0B, #D97706)' }}></div>
-                  <span>En dessous</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-0.5 bg-amber-500" style={{ borderStyle: 'dashed' }}></div>
-                  <span>Ligne objectif</span>
-                </div>
-              </>
-            )}
-          </div>
-          <div className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
-            Max: {formatTime(maxWorkTime)}
-          </div>
-        </div>
+              )}
+              {workTimeData.map((data, index) => {
+                const barHeight = getBarHeight(data.totalTime);
+                const barX = getBarX(index);
+                const barY = getBarY(data.totalTime);
+                const isAboveTarget = showReferenceBar && data.totalTime >= referenceValue;
+                const isHovered = hoveredPoint === index;
+                const gradientId = showReferenceBar ? (isAboveTarget ? "barGradientSuccess" : "barGradientWarning") : "barGradient";
+                return (
+                  <g key={index} onMouseEnter={() => setHoveredPoint(index)} onMouseLeave={() => setHoveredPoint(null)} className="cursor-pointer">
+                    <rect x={barX} y={barY} width={barWidth} height={Math.max(barHeight, 2)} rx="6" fill={`url(#${gradientId})`} opacity={isHovered ? 1 : 0.85} style={{ transition: 'all 0.2s ease', transform: isHovered ? 'scaleY(1.02)' : 'scaleY(1)', transformOrigin: 'bottom' }} />
+                    {isHovered && <text x={barX + barWidth / 2} y={barY - 8} textAnchor="middle" className="text-xs font-semibold" fill="rgb(var(--color-text-primary))">{formatTime(data.totalTime)}</text>}
+                    <text x={barX + barWidth / 2} y={chartHeight - paddingBottom + 20} textAnchor="middle" className="text-xs" fill="rgb(var(--color-text-muted))">{data.label}</text>
+                  </g>
+                );
+              })}
+            </svg>
+            </div>
+  
       </div>
 
-      {selectedSection === 'tasks' && <TasksStatistics tasks={tasks} colorSettings={colorSettings} />}
-      {selectedSection === 'agenda' && <AgendaStatistics events={events} />}
-      {selectedSection === 'okr' && <OKRStatistics objectives={mockOKRs} />}
-      {selectedSection === 'habits' && <HabitsStatistics habits={mockHabits} />}
+      <div className="mb-8 text-center">
+        <span className="text-xl md:text-2xl font-black text-slate-400 dark:text-white not-italic uppercase tracking-tight">
+          {periodDescriptiveText[selectedPeriod]}
+        </span>
+      </div>
+
+      {selectedSection === 'tasks' && <TasksStatistics tasks={rollingTasks} colorSettings={colorSettings} />}
+      {selectedSection === 'agenda' && <AgendaStatistics events={rollingEvents} colorSettings={colorSettings} />}
+      {selectedSection === 'okr' && <OKRStatistics objectives={okrs} rollingRange={rollingRange} />}
+        {selectedSection === 'habits' && <HabitsStatistics habits={habits} rollingRange={rollingRange} selectedPeriod={selectedPeriod} now={now} />}
+      {selectedSection === 'all' && <OverviewStatistics workTimeData={rollingWorkTimeData} colorSettings={colorSettings} />}
     </div>
   );
 }
 
-const TasksStatistics: React.FC<{ tasks: any[], colorSettings: any }> = ({ tasks, colorSettings }) => {
-  const completedTasks = tasks.filter(task => task.completed);
+const OverviewStatistics: React.FC<{ workTimeData: any[], colorSettings: any }> = ({ workTimeData, colorSettings }) => {
+  const totalDetails = workTimeData.reduce((acc, period) => {
+    acc.tasksTime += period.details.tasksTime;
+    acc.eventsTime += period.details.eventsTime;
+    acc.habitsTime += period.details.habitsTime;
+    acc.okrTime += period.details.okrTime;
+    return acc;
+  }, { tasksTime: 0, eventsTime: 0, habitsTime: 0, okrTime: 0 });
 
-  const colorDistribution = Object.keys(colorSettings).map(color => ({
-    color,
-    name: colorSettings[color],
-    count: tasks.filter(task => task.category === color).length,
-    completed: completedTasks.filter(task => task.category === color).length
-  }));
+  const totalTime = totalDetails.tasksTime + totalDetails.eventsTime + totalDetails.habitsTime + totalDetails.okrTime;
+  const maxTime = Math.max(totalDetails.tasksTime, totalDetails.eventsTime, totalDetails.habitsTime, totalDetails.okrTime, 1);
 
-  const priorityDistribution = [1, 2, 3, 4, 5].map(priority => ({
-    priority,
-    count: tasks.filter(task => task.priority === priority).length,
-    completed: completedTasks.filter(task => task.priority === priority).length
-  }));
-
-  const maxColorCount = Math.max(...colorDistribution.map(c => c.count), 1);
-  const maxPriorityCount = Math.max(...priorityDistribution.map(p => p.count), 1);
-
-  const getColorValue = (colorKey: string) => {
-    const colors: Record<string, string> = {
-      red: '#EF4444',
-      blue: '#3B82F6',
-      green: '#10B981',
-      purple: '#8B5CF6',
-      orange: '#F97316'
-    };
-    return colors[colorKey] || '#64748B';
+  const formatTime = (m: number) => {
+    const hours = Math.floor(m / 60); const mins = Math.round(m % 60);
+    return hours === 0 ? `${mins}min` : `${hours}h${mins < 10 ? '0' : ''}${mins}`;
   };
 
-  const priorityColors = ['#EF4444', '#F97316', '#F59E0B', '#3B82F6', '#6B7280'];
+  const breakdown = [
+    { id: 'tasks', label: 'Tâches', time: totalDetails.tasksTime, color: '#8B5CF6', icon: CheckSquare },
+    { id: 'agenda', label: 'Agenda', time: totalDetails.eventsTime, color: '#3B82F6', icon: CalendarDays },
+    { id: 'habits', label: 'Habitudes', time: totalDetails.habitsTime, color: '#10B981', icon: Repeat },
+    { id: 'okr', label: 'OKR', time: totalDetails.okrTime, color: '#6366F1', icon: Target },
+  ].sort((a, b) => b.time - a.time);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Répartition par couleur
-        </h3>
-        <div className="space-y-4">
-          {colorDistribution.map(item => (
-            <div key={item.color} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getColorValue(item.color) }}
-                  />
-                  <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.name}</span>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2" style={{ color: 'rgb(var(--color-text-primary))' }}><BarChart3 size={20} className="text-violet-500" />Répartition globale du temps</h3>
+          <div className="space-y-6">
+            {breakdown.map(item => (
+              <div key={item.id} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${item.color}20` }}><item.icon size={18} style={{ color: item.color }} /></div>
+                    <span className="font-bold text-sm" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTime(item.time)}</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{totalTime > 0 ? Math.round((item.time / totalTime) * 100) : 0}%</span>
+                  </div>
                 </div>
-                <span className="text-sm font-semibold" style={{ color: 'rgb(var(--color-text-secondary))' }}>{item.count}</span>
+                <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-1000" style={{ backgroundColor: item.color, width: `${(item.time / maxTime) * 100}%` }} />
+                </div>
               </div>
-              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
-                <div 
-                  className="h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    backgroundColor: getColorValue(item.color),
-                    width: `${(item.count / maxColorCount) * 100}%` 
-                  }}
-                />
-              </div>
-              <div className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                {item.completed} complétée{item.completed !== 1 ? 's' : ''} sur {item.count}
-              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-6 flex flex-col items-center justify-center text-center">
+          <div className="relative w-48 h-48 mb-6">
+            <svg viewBox="-1.1 -1.1 2.2 2.2" className="w-full h-full rotate-[-90deg]">
+              {totalTime > 0 ? (() => {
+                let currentCumulative = 0;
+                return breakdown.map((item, idx) => {
+                  const pct = item.time / totalTime;
+                  if (pct === 0) return null;
+                  const sx = Math.cos(currentCumulative * 2 * Math.PI);
+                  const sy = Math.sin(currentCumulative * 2 * Math.PI);
+                  currentCumulative += pct;
+                  const [ex, ey] = [Math.cos(currentCumulative * 2 * Math.PI), Math.sin(currentCumulative * 2 * Math.PI)];
+                  return <path key={idx} d={`M ${sx} ${sy} A 1 1 0 ${pct > 0.5 ? 1 : 0} 1 ${ex} ${ey} L 0 0`} fill={item.color} stroke="rgb(var(--color-surface))" strokeWidth="0.02" />;
+                });
+              })() : <circle cx="0" cy="0" r="1" fill="rgb(var(--color-hover))" />}
+              <circle cx="0" cy="0" r="0.75" fill="rgb(var(--color-surface))" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Total investi</span>
+              <span className="text-xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTime(totalTime)}</span>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Répartition par priorité
-        </h3>
-        <div className="space-y-4">
-          {priorityDistribution.map((item, idx) => (
-            <div key={item.priority} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
-                  Priorité {item.priority}
-                </span>
-                <span className="text-sm font-semibold" style={{ color: 'rgb(var(--color-text-secondary))' }}>{item.count}</span>
-              </div>
-              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
-                <div 
-                  className="h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    backgroundColor: priorityColors[idx],
-                    width: `${(item.count / maxPriorityCount) * 100}%` 
-                  }}
-                />
-              </div>
-              <div className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                {item.completed} complétée{item.completed !== 1 ? 's' : ''} sur {item.count}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AgendaStatistics: React.FC<{ events: any[] }> = ({ events }) => {
-  const today = new Date();
-  const thisWeek = events.filter(event => {
-    const eventDate = new Date(event.start);
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    return eventDate >= weekStart && eventDate <= weekEnd;
-  });
-
-  const thisMonth = events.filter(event => {
-    const eventDate = new Date(event.start);
-    return eventDate.getMonth() === today.getMonth() && 
-           eventDate.getFullYear() === today.getFullYear();
-  });
-
-  const durationRanges = [
-    { label: '< 30 min', min: 0, max: 30, color: '#10B981' },
-    { label: '30-60 min', min: 30, max: 60, color: '#3B82F6' },
-    { label: '1-2h', min: 60, max: 120, color: '#8B5CF6' },
-    { label: '2-4h', min: 120, max: 240, color: '#F59E0B' },
-    { label: '> 4h', min: 240, max: Infinity, color: '#EF4444' }
-  ];
-
-  const durationDistribution = durationRanges.map(range => {
-    const count = events.filter(event => {
-      const start = new Date(event.start);
-      const end = new Date(event.end);
-      const duration = (end.getTime() - start.getTime()) / (1000 * 60);
-      return duration >= range.min && duration < range.max;
-    }).length;
-    
-    return { ...range, count };
-  });
-
-  const maxDurationCount = Math.max(...durationDistribution.map(d => d.count), 1);
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Événements planifiés
-        </h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-            <span className="font-medium text-blue-600 dark:text-blue-400">Cette semaine</span>
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{thisWeek.length}</span>
           </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">Ce mois</span>
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{thisMonth.length}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
-            <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>Total</span>
-            <span className="text-2xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{events.length}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Répartition par durée
-        </h3>
-        <div className="space-y-4">
-          {durationDistribution.map((item, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.label}</span>
-                <span className="text-sm font-semibold" style={{ color: 'rgb(var(--color-text-secondary))' }}>{item.count}</span>
-              </div>
-              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
-                <div 
-                  className="h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    backgroundColor: item.color,
-                    width: `${(item.count / maxDurationCount) * 100}%` 
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const OKRStatistics: React.FC<{ objectives: any[] }> = ({ objectives }) => {
-  const totalObjectives = objectives.length;
-  const completedObjectives = objectives.filter(obj => obj.completed).length;
-  const inProgressObjectives = totalObjectives - completedObjectives;
-
-  const totalEstimatedTime = objectives.reduce((sum, obj) => sum + obj.estimatedTime, 0);
-  const avgTimePerObjective = totalObjectives > 0 ? Math.round(totalEstimatedTime / totalObjectives) : 0;
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours === 0) return `${mins}min`;
-    if (mins === 0) return `${hours}h`;
-    return `${hours}h${mins}min`;
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Objectifs OKR
-        </h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-            <span className="font-medium text-blue-600 dark:text-blue-400">Total objectifs</span>
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalObjectives}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">Complétés</span>
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{completedObjectives}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(249, 115, 22, 0.1)' }}>
-            <span className="font-medium text-orange-600 dark:text-orange-400">En cours</span>
-            <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{inProgressObjectives}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Temps estimé
-        </h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
-            <span className="font-medium text-violet-600 dark:text-violet-400">Temps total</span>
-            <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">{formatTime(totalEstimatedTime)}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
-            <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>Moyenne par objectif</span>
-            <span className="text-2xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTime(avgTimePerObjective)}</span>
-          </div>
-        </div>
-
-        <div className="mt-6 pt-4 border-t" style={{ borderColor: 'rgb(var(--color-border))' }}>
-          <h4 className="text-sm font-semibold mb-4" style={{ color: 'rgb(var(--color-text-secondary))' }}>Répartition du temps</h4>
-          <div className="space-y-3">
-            {objectives.map(obj => (
-              <div key={obj.id} className="flex justify-between items-center text-sm">
-                <span className="truncate flex-1 mr-2" style={{ color: 'rgb(var(--color-text-primary))' }}>{obj.title}</span>
-                <span className="font-semibold" style={{ color: 'rgb(var(--color-text-secondary))' }}>{formatTime(obj.estimatedTime)}</span>
+          <div className="grid grid-cols-2 gap-3 w-full">
+            {breakdown.filter(i => i.time > 0).map(item => (
+              <div key={item.id} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground justify-center">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                {item.label}
               </div>
             ))}
           </div>
@@ -865,69 +608,264 @@ const OKRStatistics: React.FC<{ objectives: any[] }> = ({ objectives }) => {
   );
 };
 
-const HabitsStatistics: React.FC<{ habits: any[] }> = ({ habits }) => {
-  const totalHabits = habits.length;
-  const totalCompletions = habits.reduce((sum, habit) => {
-    return sum + Object.keys(habit.completions).filter(date => habit.completions[date]).length;
-  }, 0);
-
-  const totalEstimatedTime = habits.reduce((sum, habit) => {
-    const completionCount = Object.keys(habit.completions).filter(date => habit.completions[date]).length;
-    return sum + (habit.estimatedTime * completionCount);
-  }, 0);
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours === 0) return `${mins}min`;
-    if (mins === 0) return `${hours}h`;
-    return `${hours}h${mins}min`;
-  };
+const TasksStatistics: React.FC<{ tasks: any[], colorSettings: any }> = ({ tasks, colorSettings }) => {
+  const colorDistribution = Object.keys(colorSettings).map(color => ({
+    color, name: colorSettings[color], count: tasks.filter(task => task.category === color).length
+  }));
+  const priorityDistribution = [1, 2, 3, 4, 5].map(priority => ({
+    priority, count: tasks.filter(task => task.priority === priority).length
+  }));
+  const maxColorCount = Math.max(...colorDistribution.map(c => c.count), 1);
+  const maxPriorityCount = Math.max(...priorityDistribution.map(p => p.count), 1);
+  const avgPriority = tasks.length > 0 ? (priorityDistribution.reduce((acc, item) => acc + (item.priority * item.count), 0) / tasks.length).toFixed(1) : "0";
+  const getColorValue = (colorKey: string) => ({ red: '#EF4444', blue: '#3B82F6', green: '#10B981', purple: '#8B5CF6', orange: '#F97316' }[colorKey] || '#64748B');
+  const priorityColors = ['#EF4444', '#F97316', '#F59E0B', '#3B82F6', '#6B7280'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Habitudes
-        </h3>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-            <span className="font-medium text-blue-600 dark:text-blue-400">Total habitudes</span>
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalHabits}</span>
+        <div className="flex justify-between items-center mb-6"><h3 className="text-lg font-semibold" style={{ color: 'rgb(var(--color-text-primary))' }}>Répartition par couleur</h3><span className="text-sm font-medium px-2 py-1 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">{tasks.length} tâches réalisées</span></div>
+        <div className="space-y-4">
+          {colorDistribution.map(item => (
+            <div key={item.color} className="space-y-2">
+              <div className="flex justify-between items-center"><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColorValue(item.color) }} /><span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.name}</span></div><span className="text-sm font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.count}</span></div>
+              <div className="w-full rounded-full h-2.5" style={{ backgroundColor: 'rgb(var(--color-hover))' }}><div className="h-2.5 rounded-full transition-all duration-500" style={{ backgroundColor: getColorValue(item.color), width: `${(item.count / maxColorCount) * 100}%` }} /></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="card p-6">
+        <div className="flex justify-between items-center mb-6"><h3 className="text-lg font-semibold" style={{ color: 'rgb(var(--color-text-primary))' }}>Répartition par priorité</h3><span className="text-sm font-medium px-2 py-1 rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">Priorité moyenne : {avgPriority}</span></div>
+        <div className="space-y-4">
+          {priorityDistribution.map((item, idx) => (
+            <div key={item.priority} className="space-y-2">
+              <div className="flex justify-between items-center"><span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>Priorité {item.priority}</span><span className="text-sm font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.count}</span></div>
+              <div className="w-full rounded-full h-2.5" style={{ backgroundColor: 'rgb(var(--color-hover))' }}><div className="h-2.5 rounded-full transition-all duration-500" style={{ backgroundColor: priorityColors[idx], width: `${(item.count / maxPriorityCount) * 100}%` }} /></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AgendaStatistics: React.FC<{ events: any[], colorSettings: any }> = ({ events, colorSettings }) => {
+  const timeByColor = Object.keys(colorSettings).map(color => {
+    const colorEvents = events.filter(e => e.color === color);
+    const totalMinutes = colorEvents.reduce((sum, event) => sum + (new Date(event.end).getTime() - new Date(event.start).getTime()) / 60000, 0);
+    return { color, name: colorSettings[color], minutes: totalMinutes, count: colorEvents.length };
+  }).filter(item => item.minutes > 0).sort((a, b) => b.minutes - a.minutes);
+  const totalMinutesAll = timeByColor.reduce((sum, item) => sum + item.minutes, 0);
+  const maxMinutes = Math.max(...timeByColor.map(c => c.minutes), 1);
+  const sortedEvents = [...events].map(event => ({ ...event, duration: (new Date(event.end).getTime() - new Date(event.start).getTime()) / 60000 })).sort((a, b) => b.duration - a.duration);
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return hours === 0 ? `${mins}min` : `${hours}h${mins < 10 ? '0' : ''}${mins}`;
+  };
+  const getColorValue = (colorKey: string) => ({ red: '#EF4444', blue: '#3B82F6', green: '#10B981', purple: '#8B5CF6', orange: '#F97316', okr: '#6366F1' }[colorKey] || '#64748B');
+  let currentCumulative = 0;
+  const getCoords = (pct: number) => [Math.cos((pct - 0.25) * 2 * Math.PI), Math.sin((pct - 0.25) * 2 * Math.PI)];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2" style={{ color: 'rgb(var(--color-text-primary))' }}><BarChart3 size={20} className="text-violet-500" />Répartition par catégorie</h3>
+          <div className="flex flex-wrap items-center justify-center gap-10 lg:gap-16">
+            <div className="relative w-56 h-56 shrink-0">
+              <svg viewBox="-1.1 -1.1 2.2 2.2" className="w-full h-full">
+                {timeByColor.length > 0 ? timeByColor.map((item, idx) => {
+                  const pct = item.minutes / totalMinutesAll;
+                  const [sx, sy] = getCoords(currentCumulative);
+                  currentCumulative += pct;
+                  const [ex, ey] = getCoords(currentCumulative);
+                  return <path key={idx} d={`M ${sx} ${sy} A 1 1 0 ${pct > 0.5 ? 1 : 0} 1 ${ex} ${ey} L 0 0`} fill={getColorValue(item.color)} stroke="#FFFFFF" strokeWidth="0.04" />;
+                }) : <circle cx="0" cy="0" r="1" fill="rgb(var(--color-hover))" />}
+                <circle cx="0" cy="0" r="0.75" fill="rgb(var(--color-surface))" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Total</span><span className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTime(totalMinutesAll)}</span></div>
+            </div>
+            <div className="flex-1 min-w-[280px] space-y-4">
+              {timeByColor.map(item => (
+                <div key={item.color} className="space-y-1.5">
+                  <div className="flex justify-between items-center text-sm"><div className="flex items-center gap-2.5"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColorValue(item.color) }} /><span className="font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{item.name}</span></div><div className="flex items-center gap-3"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{formatTime(item.minutes)}</span><span className="font-black text-violet-500">{Math.round((item.minutes / totalMinutesAll) * 100)}%</span></div></div>
+                  <div className="w-full h-2 rounded-full bg-muted/50 overflow-hidden"><div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ backgroundColor: getColorValue(item.color), width: `${(item.minutes / maxMinutes) * 100}%` }} /></div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">Complétions totales</span>
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalCompletions}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
-            <span className="font-medium text-violet-600 dark:text-violet-400">Temps investi</span>
-            <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">{formatTime(totalEstimatedTime)}</span>
+        </div>
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2" style={{ color: 'rgb(var(--color-text-primary))' }}><Clock size={20} className="text-emerald-500" />Événements par temps de travail</h3>
+          <div className="space-y-3">
+            {sortedEvents.length > 0 ? sortedEvents.map(event => (
+              <div key={event.id} className="flex items-center justify-between p-3 rounded-xl border transition-all hover:bg-muted/30" style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))' }}>
+                <div className="flex items-center gap-3 overflow-hidden"><div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${getColorValue(event.color)}20` }}><div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColorValue(event.color) }} /></div><div className="overflow-hidden"><p className="font-semibold text-sm truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>{event.title}</p><p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'rgb(var(--color-text-muted))' }}>{colorSettings[event.color]} · {new Date(event.start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p></div></div>
+                <div className="text-right shrink-0 ml-4"><p className="font-black text-sm" style={{ color: getColorValue(event.color) }}>{formatTime(event.duration)}</p></div>
+              </div>
+            )) : <div className="py-8 text-center text-muted-foreground">Aucun événement</div>}
           </div>
         </div>
       </div>
+    </div>
+  );
+};
 
+const OKRStatistics: React.FC<{ objectives: any[], rollingRange: { start: Date, end: Date } }> = ({ objectives, rollingRange }) => {
+  const okrWorkTime = objectives.map(okr => {
+    let workedTime = 0;
+    okr.keyResults.forEach((kr: any) => {
+      const totalIncrements = (kr.history || []).reduce((sum: number, h: any) => {
+        const hDate = parseLocalDate(h.date);
+        const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+        
+        const isInRange = hDateNormalized >= rollingRange.start && hDateNormalized <= rollingRange.end;
+        return isInRange ? sum + h.increment : sum;
+      }, 0);
+      workedTime += totalIncrements * kr.estimatedTime;
+    });
+    return { id: okr.id, title: okr.title, workedTime };
+  }).filter(okr => okr.workedTime > 0);
+
+  const totalWorkedTime = okrWorkTime.reduce((sum, obj) => sum + obj.workedTime, 0);
+  const formatTime = (m: number) => {
+    const hours = Math.floor(m / 60); const mins = Math.round(m % 60);
+    return hours === 0 ? `${mins}min` : `${hours}h${mins < 10 ? '0' : ''}${mins}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card p-5 border-l-4 border-l-blue-500"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Total Objectifs</p><p className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>{objectives.length}</p></div>
+        <div className="card p-5 border-l-4 border-l-emerald-500"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Objectifs travaillés</p><p className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>{okrWorkTime.length}</p></div>
+        <div className="card p-5 border-l-4 border-l-violet-500"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Temps total réel</p><p className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTime(totalWorkedTime)}</p></div>
+      </div>
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>
-          Détail par habitude
+        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2" style={{ color: 'rgb(var(--color-text-primary))' }}><Target size={20} className="text-violet-500" />Répartition de l'effort par OKR</h3>
+        <div className="space-y-6">
+          {okrWorkTime.length > 0 ? okrWorkTime.sort((a, b) => b.workedTime - a.workedTime).map(okr => (
+            <div key={okr.id} className="space-y-2">
+              <div className="flex justify-between items-center"><span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{okr.title}</span><div className="flex items-center gap-3"><span className="text-sm font-bold text-violet-500">{formatTime(okr.workedTime)}</span><span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">{Math.round((okr.workedTime / totalWorkedTime) * 100)}%</span></div></div>
+              <div className="w-full h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-violet-500 transition-all duration-1000" style={{ width: `${(okr.workedTime / Math.max(...okrWorkTime.map(o => o.workedTime))) * 100}%` }} /></div>
+            </div>
+          )) : <div className="py-8 text-center text-muted-foreground">Aucun effort enregistré.</div>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HabitsStatistics: React.FC<{ habits: any[], rollingRange: { start: Date, end: Date }, selectedPeriod: string, now: Date }> = ({ habits, rollingRange, selectedPeriod, now }) => {
+  const habitsStats = habits.map(habit => {
+      let completionsCount = 0;
+      let relevantDaysCount = 0;
+      
+      const createdDate = habit.createdAt ? new Date(habit.createdAt) : new Date(0);
+      createdDate.setHours(0, 0, 0, 0);
+
+      // Count completions in the defined range
+      Object.keys(habit.completions).forEach(date => {
+        if (!habit.completions[date]) return;
+        const hDate = parseLocalDate(date);
+        hDate.setHours(0, 0, 0, 0);
+        if (hDate >= rollingRange.start && hDate <= rollingRange.end) {
+          completionsCount++;
+        }
+      });
+
+      // Calculate relevant days (days in this range that are after creation AND NOT IN FUTURE)
+      const effectiveEnd = new Date(rollingRange.end > now ? now : rollingRange.end);
+      effectiveEnd.setHours(23, 59, 59, 999);
+      const effectiveStart = new Date(createdDate > rollingRange.start ? createdDate : rollingRange.start);
+      effectiveStart.setHours(0, 0, 0, 0);
+
+      if (effectiveStart <= effectiveEnd) {
+        const diffTime = effectiveEnd.getTime() - effectiveStart.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        relevantDaysCount = diffDays;
+      }
+
+      return { ...habit, periodCompletions: completionsCount, periodTime: completionsCount * habit.estimatedTime, relevantDaysCount };
+    });
+
+  const totalCompletions = habitsStats.reduce((sum, h) => sum + h.periodCompletions, 0);
+  const totalEstimatedTime = habitsStats.reduce((sum, h) => sum + h.periodTime, 0);
+  const totalRelevantDays = habitsStats.reduce((sum, h) => sum + h.relevantDaysCount, 0);
+  
+  const formatTime = (m: number) => {
+    const hours = Math.floor(m / 60); const mins = Math.round(m % 60);
+    return hours === 0 ? `${mins}min` : `${hours}h${mins < 10 ? '0' : ''}${mins}`;
+  };
+  
+  const avgRate = totalRelevantDays > 0 ? Math.round((totalCompletions / totalRelevantDays) * 100) : 0;
+  
+  const periodSuffix = 
+    selectedPeriod === 'day' ? "aujourd'hui" :
+    selectedPeriod === 'week' ? "(7 derniers jours)" :
+    selectedPeriod === 'month' ? "(30 derniers jours)" :
+    "(365 derniers jours)";
+
+  const detailSuffix = 
+    selectedPeriod === 'day' ? "aujourd'hui" :
+    selectedPeriod === 'week' ? "(7 derniers jours)" :
+    selectedPeriod === 'month' ? "(30 derniers jours)" :
+    "(365 derniers jours)";
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card p-5 border-l-4 border-l-blue-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
+            Habitudes actives {periodSuffix}
+          </p>
+            <p className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>
+              {habitsStats.filter(h => h.periodCompletions > 0).length} / {habitsStats.filter(h => h.relevantDaysCount > 0).length}
+            </p>
+        </div>
+        <div className="card p-5 border-l-4 border-l-emerald-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
+            Taux de succès {periodSuffix}
+          </p>
+          <p className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>
+            {avgRate}%
+          </p>
+        </div>
+        <div className="card p-5 border-l-4 border-l-violet-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
+            Temps investi {periodSuffix}
+          </p>
+          <p className="text-2xl font-black" style={{ color: 'rgb(var(--color-text-primary))' }}>
+            {formatTime(totalEstimatedTime)}
+          </p>
+        </div>
+      </div>
+      <div className="card p-6">
+        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2" style={{ color: 'rgb(var(--color-text-primary))' }}>
+          <Repeat size={20} className="text-emerald-500" />
+          Détail par habitude {detailSuffix}
         </h3>
-        <div className="space-y-3">
-          {habits.map(habit => {
-            const completionCount = Object.keys(habit.completions).filter(date => habit.completions[date]).length;
-            const totalTime = habit.estimatedTime * completionCount;
-            
+        <div className="space-y-6">
+          {habitsStats.filter(h => h.relevantDaysCount > 0).length > 0 ? habitsStats.filter(h => h.relevantDaysCount > 0).sort((a, b) => b.periodTime - a.periodTime).map(habit => {
+            const rate = habit.relevantDaysCount > 0 ? Math.min(100, Math.round((habit.periodCompletions / habit.relevantDaysCount) * 100)) : 0;
             return (
-              <div key={habit.id} className="p-4 rounded-xl" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{habit.name}</span>
-                  <span className="text-sm font-semibold" style={{ color: 'rgb(var(--color-text-secondary))' }}>{completionCount} fois</span>
+              <div key={habit.id} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{habit.name}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">{habit.periodCompletions} fois</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-emerald-600">{formatTime(habit.periodTime)}</span>
+                    <span className="text-xs font-bold" style={{ color: 'rgb(var(--color-text-muted))' }}>{rate}%</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-sm" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                  <span>{habit.estimatedTime}min par session</span>
-                  <span className="font-medium">{formatTime(totalTime)} total</span>
+                <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${rate}%` }} />
                 </div>
               </div>
             );
-          })}
+          }) : <div className="py-8 text-center text-muted-foreground">Aucune habitude complétée ou active sur cette période.</div>}
         </div>
       </div>
     </div>
