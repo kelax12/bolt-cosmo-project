@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Flame, Calendar, Edit2, Trash2, CheckCircle, X, Save } from 'lucide-react';
+import { Clock, Flame, Calendar, Edit2, Trash2, CheckCircle, Circle, X, Save } from 'lucide-react';
 import { useTasks, Habit } from '../context/TaskContext';
 import {
   AlertDialog,
@@ -61,16 +61,16 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, externalIsEditing, onExter
     const startOffset = endAtToday ? -(count - 1) : Math.floor(count / 2) * -1;
     const endOffset = endAtToday ? 0 : Math.floor(count / 2);
     
-    for (let i = startOffset; i <= endOffset; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push({
-        date: date.toISOString().split('T')[0],
-        dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
-        dayNumber: date.getDate(),
-        isToday: i === 0,
-      });
-    }
+      for (let i = startOffset; i <= endOffset; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        days.push({
+          date: date.toLocaleDateString('en-CA'),
+          dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
+          dayNumber: date.getDate(),
+          isToday: i === 0,
+        });
+      }
     
     return days;
   };
@@ -106,7 +106,9 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, externalIsEditing, onExter
     }
   };
 
-  const habitColor = colorOptions.find(c => c.value === habit.color)?.color || '#3B82F6';
+  const habitColor = habit.color.startsWith('#') 
+    ? habit.color 
+    : (colorOptions.find(c => c.value === habit.color)?.color || '#3B82F6');
 
   return (
     <div className="card p-6 hover:shadow-md transition-all">
@@ -258,36 +260,45 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, externalIsEditing, onExter
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">7 derniers jours</span>
             </div>
             <div className="flex gap-2">
-              {compactDays.map(day => {
-                const isCompleted = habit.completions[day.date];
-                
-                return (
-                  <div key={day.date} className="flex flex-col items-center">
-                    <div className="text-xs text-slate-500 mb-1 font-medium">{day.dayName}</div>
-                    <button
-                      onClick={() => handleDayClick(day.date)}
-                      className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${
-                        day.isToday 
-                          ? 'border-slate-900 dark:border-slate-100 bg-slate-50 dark:bg-slate-800' 
-                          : 'border-slate-200 dark:border-slate-700'
-                      } ${
-                        isCompleted 
-                          ? 'border-green-500 text-white' 
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
-                      }`}
-                      style={{
-                        backgroundColor: isCompleted ? '#10B981' : undefined
-                      }}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle size={16} />
-                      ) : (
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{day.dayNumber}</span>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
+                {compactDays.map(day => {
+                  const isCompleted = habit.completions[day.date];
+                  const createdDate = habit.createdAt ? habit.createdAt.split('T')[0] : '';
+                  const isBeforeCreation = createdDate ? day.date < createdDate : false;
+                  
+                  return (
+                    <div key={day.date} className="flex flex-col items-center">
+                      <div className="text-xs text-slate-500 mb-1 font-medium">{day.dayName}</div>
+                          <button
+                            onClick={() => !isBeforeCreation && handleDayClick(day.date)}
+                            disabled={isBeforeCreation}
+                            className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${
+                              day.isToday 
+                                ? 'border-slate-900 dark:border-slate-100 bg-slate-50 dark:bg-slate-800' 
+                                : 'border-slate-200 dark:border-slate-700'
+                            } ${
+                              isCompleted 
+                                ? 'border-green-500 text-white' 
+                                : isBeforeCreation
+                                  ? 'opacity-30 grayscale cursor-not-allowed bg-slate-100 dark:bg-slate-900 border-transparent'
+                                  : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                            }`}
+                            style={{
+                              backgroundColor: isCompleted ? '#10B981' : undefined
+                            }}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle size={16} />
+                            ) : isBeforeCreation ? (
+                              <Circle size={14} className="opacity-10" />
+                            ) : (
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{day.dayNumber}</span>
+                            )}
+                          </button>
+
+                    </div>
+                  );
+                })}
+
             </div>
           </div>
 
@@ -295,38 +306,47 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, externalIsEditing, onExter
           {showDetails && (
             <div className="border-t border-slate-200 pt-4">
               <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-3">Suivi détaillé (3 semaines)</h4>
-              <div className="grid grid-cols-7 gap-2">
-                {detailedDays.map(day => {
-                  const isCompleted = habit.completions[day.date];
-                  
-                  return (
-                    <div key={day.date} className="flex flex-col items-center">
-                      <div className="text-xs text-slate-500 mb-1">{day.dayName}</div>
-                      <button
-                        onClick={() => handleDayClick(day.date)}
-                        className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${
-                          day.isToday 
-                            ? 'border-slate-900 dark:border-slate-100 bg-slate-50 dark:bg-slate-800' 
-                            : 'border-slate-200 dark:border-slate-700'
-                        } ${
-                          isCompleted 
-                            ? 'border-green-500 text-white' 
-                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
-                        }`}
-                        style={{
-                          backgroundColor: isCompleted ? '#10B981' : undefined
-                        }}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle size={14} />
-                        ) : (
-                          <span className="text-xs text-slate-600 dark:text-slate-400">{day.dayNumber}</span>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {detailedDays.map(day => {
+                    const isCompleted = habit.completions[day.date];
+                    const createdDate = habit.createdAt ? habit.createdAt.split('T')[0] : '';
+                    const isBeforeCreation = createdDate ? day.date < createdDate : false;
+                    
+                    return (
+                      <div key={day.date} className="flex flex-col items-center">
+                        <div className="text-xs text-slate-500 mb-1">{day.dayName}</div>
+                          <button
+                            onClick={() => !isBeforeCreation && handleDayClick(day.date)}
+                            disabled={isBeforeCreation}
+                            className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${
+                              day.isToday 
+                                ? 'border-slate-900 dark:border-slate-100 bg-slate-50 dark:bg-slate-800' 
+                                : 'border-slate-200 dark:border-slate-700'
+                            } ${
+                              isCompleted 
+                                ? 'border-green-500 text-white' 
+                                : isBeforeCreation
+                                  ? 'opacity-30 grayscale cursor-not-allowed bg-slate-100 dark:bg-slate-900 border-transparent'
+                                  : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+                            }`}
+                            style={{
+                              backgroundColor: isCompleted ? '#10B981' : undefined
+                            }}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle size={14} />
+                            ) : isBeforeCreation ? (
+                              <Circle size={12} className="opacity-10" />
+                            ) : (
+                              <span className="text-xs text-slate-600 dark:text-slate-400">{day.dayNumber}</span>
+                            )}
+                          </button>
+
+                      </div>
+                    );
+                  })}
+                </div>
+
             </div>
           )}
         </>
