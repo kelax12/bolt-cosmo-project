@@ -1,6 +1,5 @@
 import React from 'react';
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
-import { TaskProvider } from './context/TaskContext';
+import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
@@ -12,13 +11,9 @@ import StatisticsPage from './pages/StatisticsPage';
 import MessagingPage from './pages/MessagingPage';
 import PremiumPage from './pages/PremiumPage';
 import SettingsPage from './pages/SettingsPage';
-import { useTasks } from './context/TaskContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { TaskProvider, useTasks } from './context/TaskContext';
 import { Toaster } from 'sonner';
-import HoverReceiver from "@/visual-edits/VisualEditsMessenger";
-
-const queryClient = new QueryClient();
+import HoverReceiver from "./visual-edits/VisualEditsMessenger";
 
 function AppContent() {
   const { user } = useTasks();
@@ -48,18 +43,11 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <TaskProvider>
-        <Toaster />
-        <HoverReceiver />
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </TaskProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <TaskProvider>
+    <Toaster />
+    <HoverReceiver />
+    <AppContent />
+  </TaskProvider>
 );
 
-export default App;
 export default App;
