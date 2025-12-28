@@ -1,27 +1,20 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
+import ColorSettingsModal from './ColorSettingsModal';
 
 interface HabitFormProps {
   onClose: () => void;
 }
 
-const colorOptions = [
-  { value: 'blue', color: '#3B82F6', name: 'Bleu' },
-  { value: 'green', color: '#10B981', name: 'Vert' },
-  { value: 'purple', color: '#8B5CF6', name: 'Violet' },
-  { value: 'orange', color: '#F97316', name: 'Orange' },
-  { value: 'red', color: '#EF4444', name: 'Rouge' },
-  { value: 'pink', color: '#EC4899', name: 'Rose' },
-];
-
 const HabitForm: React.FC<HabitFormProps> = ({ onClose }) => {
-  const { addHabit } = useTasks();
+  const { addHabit, favoriteColors, categories } = useTasks();
   const [formData, setFormData] = useState({
     name: '',
     estimatedTime: 30,
-    color: 'blue'
+    color: favoriteColors[0] || '#3B82F6'
   });
+  const [isColorSettingsOpen, setIsColorSettingsOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +26,8 @@ const HabitForm: React.FC<HabitFormProps> = ({ onClose }) => {
       estimatedTime: formData.estimatedTime,
       completions: {},
       streak: 0,
-      color: formData.color
+      color: formData.color,
+      createdAt: new Date().toISOString()
     };
 
     addHabit(habit);
@@ -108,54 +102,75 @@ const HabitForm: React.FC<HabitFormProps> = ({ onClose }) => {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-3" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-            Couleur
-          </label>
-          <div className="flex gap-3">
-            {colorOptions.map(option => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setFormData({ ...formData, color: option.value })}
-                className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 ${
-                  formData.color === option.value ? 'scale-110' : ''
-                }`}
-                style={{
-                  backgroundColor: option.color,
-                  borderColor: formData.color === option.value ? 'rgb(var(--color-text-primary))' : 'rgb(var(--color-border))'
-                }}
-                title={option.name}
+          <div>
+            <label className="flex justify-between items-center text-sm font-medium mb-3" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+              <span>Couleur</span>
+              <Plus 
+                className="w-4 h-4 text-blue-500 cursor-pointer hover:scale-125 transition-transform" 
+                onClick={() => setIsColorSettingsOpen(true)}
               />
-            ))}
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {favoriteColors.map((favColor, index) => (
+                <button
+                  key={`${favColor}-${index}`}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, color: favColor })}
+                  className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-105 ${
+                    formData.color === favColor ? 'scale-110 shadow-lg' : ''
+                  }`}
+                  style={{
+                    backgroundColor: favColor,
+                    borderColor: formData.color === favColor ? 'rgb(var(--color-text-primary))' : 'rgb(var(--color-border))'
+                  }}
+                />
+              ))}
+            </div>
+            
+            {categories.length > 0 && (
+              <div
+                className="mt-4 p-2.5 rounded-xl border bg-opacity-30 transition-colors"
+                style={{ borderColor: 'rgb(var(--color-border))' }}
+              >
+                <h4 className="text-[12px] font-bold uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                  Légende des catégories
+                </h4>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: cat.color }} />
+                      <span className="text-[13px] font-medium truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                        {cat.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="flex justify-end gap-3">
-          <button 
-            type="button" 
-            onClick={onClose} 
-            className="px-6 py-3 rounded-lg transition-colors"
-            style={{ color: 'rgb(var(--color-text-secondary))' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'rgb(var(--color-text-primary))';
-              e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            Annuler
-          </button>
-          <button 
-            type="submit" 
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
-          >
-            Créer l'habitude
-          </button>
-        </div>
+
+          <div className="flex justify-end gap-3">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-6 py-2.5 rounded-lg font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Annuler
+            </button>
+            <button 
+              type="submit" 
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/25 transform transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+            >
+              Créer l'habitude
+            </button>
+          </div>
       </form>
+      
+      <ColorSettingsModal 
+        isOpen={isColorSettingsOpen} 
+        onClose={() => setIsColorSettingsOpen(false)} 
+      />
     </div>
   );
 };
