@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, TrendingUp, Calendar, Edit2, Trash2, CheckCircle, BarChart3, Settings, X, Minus, Clock } from 'lucide-react';
-import OKRModal from '../components/OKRModal';
+import { Plus, TrendingUp, Calendar, Edit2, Trash2, CheckCircle, BarChart3, Settings, X, Clock } from 'lucide-react';
+import CategoryManager, { getColorHex } from '../components/CategoryManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { useTasks } from '../context/TaskContext';
+import AddTaskForm from '../components/AddTaskForm';
+import AddEventModal from '../components/AddEventModal';
 
 type KeyResult = {
   id: string;
@@ -12,6 +15,7 @@ type KeyResult = {
   unit: string;
   completed: boolean;
   estimatedTime: number;
+  history?: {date: string;increment: number;}[];
 };
 
 type Objective = {
@@ -35,88 +39,21 @@ type Category = {
 
 const OKRPage: React.FC = () => {
   const location = useLocation();
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 'personal', name: 'Personnel', color: 'blue', icon: '👤' },
-    { id: 'professional', name: 'Professionnel', color: 'green', icon: '💼' },
-    { id: 'health', name: 'Santé', color: 'red', icon: '❤️' },
-    { id: 'learning', name: 'Apprentissage', color: 'purple', icon: '📚' },
-  ]);
+  const { okrs: objectives, updateKeyResult: contextUpdateKR, addOKR, deleteOKR, addEvent, updateOKR } = useTasks();
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [selectedKeyResultForModal, setSelectedKeyResultForModal] = useState<{kr: KeyResult;obj: Objective;} | null>(null);
+  const [editingObjective, setEditingObjective] = useState<string | null>(null);
 
-  const [objectives, setObjectives] = useState<Objective[]>([
-    {
-      id: '1',
-      title: 'Améliorer mes compétences en français',
-      description: 'Développer une maîtrise approfondie de la littérature française et des techniques de dissertation',
-      category: 'learning',
-      startDate: '2025-01-01',
-      endDate: '2025-06-30',
-      completed: false,
-      estimatedTime: 180,
-      keyResults: [
-        {
-          id: '1-1',
-          title: 'Ficher 20 textes littéraires',
-          currentValue: 8,
-          targetValue: 20,
-          unit: 'textes',
-          completed: false,
-          estimatedTime: 60
-        },
-        {
-          id: '1-2',
-          title: 'Réviser 15 textes par semaine',
-          currentValue: 12,
-          targetValue: 15,
-          unit: 'textes/semaine',
-          completed: false,
-          estimatedTime: 90
-        },
-        {
-          id: '1-3',
-          title: 'Écrire 10 dissertations complètes',
-          currentValue: 3,
-          targetValue: 10,
-          unit: 'dissertations',
-          completed: false,
-          estimatedTime: 30
-        }
-      ]
-    },
-    {
-      id: '2',
-      title: 'Optimiser ma productivité',
-      description: 'Développer des habitudes de travail efficaces et maintenir un équilibre vie-travail',
-      category: 'personal',
-      startDate: '2025-01-01',
-      endDate: '2025-12-31',
-      completed: false,
-      estimatedTime: 120,
-      keyResults: [
-        {
-          id: '2-1',
-          title: 'Compléter 90% des tâches planifiées',
-          currentValue: 75,
-          targetValue: 90,
-          unit: '%',
-          completed: false,
-          estimatedTime: 60
-        },
-        {
-          id: '2-2',
-          title: 'Maintenir 8h de sommeil par nuit',
-          currentValue: 7,
-          targetValue: 8,
-          unit: 'heures',
-          completed: false,
-          estimatedTime: 60
-        }
-      ]
-    }
-  ]);
+  const [categories, setCategories] = useState<Category[]>([
+  { id: 'personal', name: 'Personnel', color: 'blue', icon: '👤' },
+  { id: 'professional', name: 'Professionnel', color: 'green', icon: '💼' },
+  { id: 'health', name: 'Santé', color: 'red', icon: '❤️' },
+  { id: 'learning', name: 'Apprentissage', color: 'purple', icon: '📚' }]
+  );
 
   const [showAddObjective, setShowAddObjective] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [editingObjective, setEditingObjective] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [deletingObjective, setDeletingObjective] = useState<string | null>(null);
 
@@ -130,44 +67,55 @@ const OKRPage: React.FC = () => {
   });
 
   const [keyResults, setKeyResults] = useState([
-    { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
-    { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
-    { title: '', targetValue: '', currentValue: '', estimatedTime: '' }
-  ]);
-
-  const categoryColors = {
-    blue: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3B82F6', border: '#BFDBFE' },
-    green: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10B981', border: '#A7F3D0' },
-    red: { bg: 'rgba(239, 68, 68, 0.1)', text: '#EF4444', border: '#FECACA' },
-    purple: { bg: 'rgba(139, 92, 246, 0.1)', text: '#8B5CF6', border: '#DDD6FE' },
-    orange: { bg: 'rgba(249, 115, 22, 0.1)', text: '#F97316', border: '#FED7AA' },
-    yellow: { bg: 'rgba(245, 158, 11, 0.1)', text: '#F59E0B', border: '#FDE68A' },
-    pink: { bg: 'rgba(236, 72, 153, 0.1)', text: '#EC4899', border: '#FBCFE8' },
-    indigo: { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366F1', border: '#C7D2FE' },
-  };
+  { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
+  { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
+  { title: '', targetValue: '', currentValue: '', estimatedTime: '' }]
+  );
 
   const getProgress = (keyResults: KeyResult[]) => {
     if (keyResults.length === 0) return 0;
     const totalProgress = keyResults.reduce((sum, kr) => {
-      return sum + Math.min((kr.currentValue / kr.targetValue) * 100, 100);
+      return sum + Math.min(kr.currentValue / kr.targetValue * 100, 100);
     }, 0);
     return Math.round(totalProgress / keyResults.length);
   };
 
+  const calculateDuration = (start: string, end: string) => {
+    if (!start || !end) return null;
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const diffTime = endDate.getTime() - startDate.getTime();
+    if (diffTime < 0) return { text: "La date d'échéance doit être après la date de début", isError: true };
+
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return { text: "Moins d'un jour", isError: false };
+    if (diffDays < 7) return { text: `${diffDays} jour${diffDays > 1 ? 's' : ''}`, isError: false };
+
+    if (diffDays < 32) {
+      const weeks = Math.floor(diffDays / 7);
+      const remainingDays = diffDays % 7;
+      let text = `${weeks} semaine${weeks > 1 ? 's' : ''}`;
+      if (remainingDays > 0) text += ` et ${remainingDays} jour${remainingDays > 1 ? 's' : ''}`;
+      return { text, isError: false };
+    }
+
+    const months = Math.floor(diffDays / 30);
+    const remainingDays = diffDays % 30;
+    let text = `${months} mois`;
+    if (remainingDays > 0) text += ` et ${remainingDays} jour${remainingDays > 1 ? 's' : ''}`;
+    return { text, isError: false };
+  };
+
   const updateKeyResult = (objectiveId: string, keyResultId: string, newValue: number) => {
-    setObjectives(prev => prev.map(obj => {
-      if (obj.id === objectiveId) {
-        return {
-          ...obj,
-          keyResults: obj.keyResults.map(kr => 
-            kr.id === keyResultId 
-              ? { ...kr, currentValue: newValue, completed: newValue >= kr.targetValue }
-              : kr
-          )
-        };
-      }
-      return obj;
-    }));
+    const obj = objectives.find((o) => o.id === objectiveId);
+    const kr = obj?.keyResults.find((k) => k.id === keyResultId);
+    if (kr) {
+      contextUpdateKR(objectiveId, keyResultId, {
+        currentValue: newValue,
+        completed: newValue >= kr.targetValue
+      });
+    }
   };
 
   const addKeyResult = () => {
@@ -183,8 +131,8 @@ const OKRPage: React.FC = () => {
   };
 
   const updateKeyResultField = (index: number, field: string, value: string) => {
-    const updated = keyResults.map((kr, i) => 
-      i === index ? { ...kr, [field]: value } : kr
+    const updated = keyResults.map((kr, i) =>
+    i === index ? { ...kr, [field]: value } : kr
     );
     setKeyResults(updated);
   };
@@ -194,35 +142,57 @@ const OKRPage: React.FC = () => {
   };
 
   const updateCategory = (categoryId: string, updates: Partial<Category>) => {
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId ? { ...cat, ...updates } : cat
+    setCategories((prev) => prev.map((cat) =>
+    cat.id === categoryId ? { ...cat, ...updates } : cat
     ));
   };
 
   const deleteCategory = (categoryId: string) => {
-    const isUsed = objectives.some(obj => obj.category === categoryId);
+    const isUsed = objectives.some((obj) => obj.category === categoryId);
     if (isUsed) {
       alert('Cette catégorie est utilisée par des objectifs existants et ne peut pas être supprimée.');
       return;
     }
-    setCategories(prev => prev.filter(cat => cat.id !== categoryId));
+    setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
   };
 
   const deleteObjective = (objectiveId: string) => {
-    setObjectives(prev => prev.filter(obj => obj.id !== objectiveId));
+    deleteOKR(objectiveId);
     setDeletingObjective(null);
+  };
+
+  const handleEditObjective = (id: string) => {
+    const objective = objectives.find(obj => obj.id === id);
+    if (objective) {
+      setEditingObjective(id);
+      setNewObjective({
+        title: objective.title,
+        description: objective.description,
+        category: objective.category,
+        startDate: objective.startDate,
+        endDate: objective.endDate,
+        estimatedTime: objective.estimatedTime
+      });
+      setKeyResults(objective.keyResults.map(kr => ({
+        title: kr.title,
+        targetValue: kr.targetValue.toString(),
+        currentValue: kr.currentValue.toString(),
+        estimatedTime: kr.estimatedTime.toString()
+      })));
+      setShowAddObjective(true);
+    }
   };
 
   const handleSubmitObjective = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newObjective.title.trim()) {
       alert('Veuillez saisir un titre pour l\'objectif');
       return;
     }
 
-    const validKeyResults = keyResults.filter(kr => 
-      kr.title.trim() && kr.targetValue && Number(kr.targetValue) > 0
+    const validKeyResults = keyResults.filter((kr) =>
+    kr.title.trim() && kr.targetValue && Number(kr.targetValue) > 0
     );
 
     if (validKeyResults.length === 0) {
@@ -230,8 +200,7 @@ const OKRPage: React.FC = () => {
       return;
     }
 
-    const newObj: Objective = {
-      id: Date.now().toString(),
+    const objData: any = {
       title: newObjective.title,
       description: newObjective.description,
       category: newObjective.category,
@@ -240,18 +209,28 @@ const OKRPage: React.FC = () => {
       completed: false,
       estimatedTime: newObjective.estimatedTime,
       keyResults: validKeyResults.map((kr, index) => ({
-        id: `${Date.now()}-${index}`,
+        id: editingObjective ? (objectives.find(o => o.id === editingObjective)?.keyResults[index]?.id || `${Date.now()}-${index}`) : `${Date.now()}-${index}`,
         title: kr.title,
         currentValue: Number(kr.currentValue) || 0,
         targetValue: Number(kr.targetValue),
         unit: '',
-        completed: false,
-        estimatedTime: Number(kr.estimatedTime) || 30
+        completed: Number(kr.currentValue) >= Number(kr.targetValue),
+        estimatedTime: Number(kr.estimatedTime) || 30,
+        history: editingObjective ? (objectives.find(o => o.id === editingObjective)?.keyResults[index]?.history || []) : []
       }))
     };
 
-    setObjectives([...objectives, newObj]);
-    
+    if (editingObjective) {
+      updateOKR(editingObjective, objData);
+    } else {
+      addOKR({ ...objData, id: Date.now().toString() });
+    }
+
+    resetForm();
+    setShowAddObjective(false);
+  };
+
+  const resetForm = () => {
     setNewObjective({
       title: '',
       description: '',
@@ -265,195 +244,148 @@ const OKRPage: React.FC = () => {
       { title: '', targetValue: '', currentValue: '', estimatedTime: '' },
       { title: '', targetValue: '', currentValue: '', estimatedTime: '' }
     ]);
-    setShowAddObjective(false);
+    setEditingObjective(null);
   };
 
-  const filteredObjectives = selectedCategory === 'all' 
-    ? objectives 
-    : objectives.filter(obj => obj.category === selectedCategory);
+  const filteredObjectives = selectedCategory === 'all' ?
+  objectives :
+  selectedCategory === 'finished' ?
+  objectives.filter((obj) => obj.completed) :
+  objectives.filter((obj) => obj.category === selectedCategory);
 
   const stats = {
     total: objectives.length,
-    completed: objectives.filter(obj => obj.completed).length,
-    inProgress: objectives.filter(obj => !obj.completed).length,
-    avgProgress: objectives.length > 0 
-      ? Math.round(objectives.reduce((sum, obj) => sum + getProgress(obj.keyResults), 0) / objectives.length)
-      : 0
+    completed: objectives.filter((obj) => obj.completed).length,
+    inProgress: objectives.filter((obj) => !obj.completed).length,
+    avgProgress: objectives.length > 0 ?
+    Math.round(objectives.reduce((sum, obj) => sum + getProgress(obj.keyResults), 0) / objectives.length) :
+    0
   };
 
-  const getCategoryById = (id: string) => categories.find(cat => cat.id === id);
+  const getCategoryById = (id: string) => categories.find((cat) => cat.id === id);
 
-  // Auto-open modal when navigating from dashboard
   useEffect(() => {
-    const state = location.state as { selectedOKRId?: string };
+    const state = location.state as {selectedOKRId?: string;};
     if (state?.selectedOKRId) {
-      setEditingObjective(state.selectedOKRId);
-      // Clear the state to avoid reopening on subsequent renders
+      handleEditObjective(state.selectedOKRId);
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="p-8 max-w-7xl mx-auto" 
-      style={{ backgroundColor: 'rgb(var(--color-background))' }}
-    >
-      <motion.div 
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex justify-between items-start mb-8"
-      >
-        <div>
-          <motion.h1 
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-3xl font-bold mb-2" 
-            style={{ color: 'rgb(var(--color-text-primary))' }}
-          >
-            OKR - Objectifs & Résultats Clés
-          </motion.h1>
-          <motion.p 
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            style={{ color: 'rgb(var(--color-text-secondary))' }}
-          >
-            Définissez et suivez vos objectifs avec des résultats mesurables
-          </motion.p>
-        </div>
-        <motion.div 
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-3"
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowCategoryManager(true)}
-            className="flex items-center gap-2 px-4 py-2 border rounded-lg transition-all shadow-sm"
-            style={{
-              borderColor: 'rgb(var(--color-border))',
-              color: 'rgb(var(--color-text-secondary))',
-              backgroundColor: 'rgb(var(--color-surface))'
-            }}
-          >
-            <Settings size={20} />
-            <span>Gérer les catégories</span>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddObjective(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={20} />
-            <span>Nouvel Objectif</span>
-          </motion.button>
-        </motion.div>
-      </motion.div>
+      className="p-4 sm:p-8 max-w-7xl mx-auto"
+      style={{ backgroundColor: 'rgb(var(--color-background))' }}>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {[
-          { icon: Target, color: 'blue', label: 'Total Objectifs', value: stats.total },
-          { icon: CheckCircle, color: 'green', label: 'Complétés', value: stats.completed },
-          { icon: TrendingUp, color: 'orange', label: 'En Cours', value: stats.inProgress },
-          { icon: BarChart3, color: 'purple', label: 'Progression Moy.', value: `${stats.avgProgress}%` }
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 + index * 0.1 }}
-            whileHover={{ scale: 1.02, y: -2 }}
-            className="p-6 rounded-lg shadow-sm border transition-all cursor-pointer"
-            style={{
-              backgroundColor: 'rgb(var(--color-surface))',
-              borderColor: 'rgb(var(--color-border))'
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <motion.div 
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-                className={`p-2 bg-${stat.color}-100 dark:bg-${stat.color}-900/30 rounded-lg`}
-              >
-                <stat.icon size={24} className={`text-${stat.color}-600 dark:text-${stat.color}-400`} />
-              </motion.div>
-              <div>
-                <p className="text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>{stat.label}</p>
-                <motion.p 
-                  key={stat.value}
-                  initial={{ scale: 1.2, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-2xl font-bold" 
-                  style={{ color: 'rgb(var(--color-text-primary))' }}
-                >
-                  {stat.value}
-                </motion.p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'rgb(var(--color-text-primary))' }}>
+          OKR - Objectifs & Résultats Clés
+        </h1>
+        <p className="text-sm sm:text-base" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+          Définissez et suivez vos objectifs avec des résultats mesurables
+        </p>
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.5 }}
-        className="flex items-center gap-4 mb-6"
-      >
-        <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Filtrer par catégorie :</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        {[
+        { icon: TrendingUp, color: 'orange', label: 'En Cours', value: stats.inProgress },
+        { icon: BarChart3, color: 'purple', label: 'Progression Moy.', value: `${stats.avgProgress}%` }].
+        map((stat) =>
+        <div
+          key={stat.label}
+          className="p-4 sm:p-6 rounded-lg shadow-sm border transition-all"
+          style={{
+            backgroundColor: 'rgb(var(--color-surface))',
+            borderColor: 'rgb(var(--color-border))'
+          }}>
+
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: `rgba(var(--color-${stat.color}-rgb), 0.1)` }}>
+                <stat.icon size={24} style={{ color: `rgb(var(--color-${stat.color}))` }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm truncate" title={stat.label} style={{ color: 'rgb(var(--color-text-secondary))' }}>{stat.label}</p>
+                <p className="text-xl sm:text-2xl font-bold truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                  {stat.value}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-8">
+        <button
+          onClick={() => setShowCategoryManager(true)}
+          className="flex items-center justify-center gap-2 px-4 py-2 border rounded-lg transition-all shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+          style={{
+            borderColor: 'rgb(var(--color-border))',
+            color: 'rgb(var(--color-text-secondary))',
+            backgroundColor: 'rgb(var(--color-surface))'
+          }}>
+
+          <Settings size={20} />
+          <span className="whitespace-nowrap">Gérer les catégories</span>
+        </button>
+          <button
+            onClick={() => setShowAddObjective(true)}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/25 transform transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">
+
+          <Plus size={20} />
+          <span className="whitespace-nowrap">Nouvel Objectif</span>
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        <span className="text-sm font-medium whitespace-nowrap" style={{ color: 'rgb(var(--color-text-secondary))' }}>Filtrer par catégorie :</span>
         <div className="flex gap-2 flex-wrap">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            <button
             onClick={() => setSelectedCategory('all')}
             className="px-3 py-1 rounded-full text-sm font-medium transition-all"
             style={{
               backgroundColor: selectedCategory === 'all' ? 'rgb(var(--color-accent) / 0.1)' : 'rgb(var(--color-hover))',
               color: selectedCategory === 'all' ? 'rgb(var(--color-accent))' : 'rgb(var(--color-text-secondary))'
-            }}
-          >
-            Tous
-          </motion.button>
-          {categories.map((category, index) => (
-            <motion.button
-              key={category.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6 + index * 0.05 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setSelectedCategory(category.id)}
-              className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-all"
-              style={{
-                backgroundColor: selectedCategory === category.id 
-                  ? categoryColors[category.color as keyof typeof categoryColors]?.bg || 'rgb(var(--color-accent) / 0.1)'
-                  : 'rgb(var(--color-hover))',
-                color: selectedCategory === category.id 
-                  ? categoryColors[category.color as keyof typeof categoryColors]?.text || 'rgb(var(--color-accent))'
-                  : 'rgb(var(--color-text-secondary))'
-              }}
-            >
+            }}>
+
+              Tous
+            </button>
+            <button
+            onClick={() => setSelectedCategory('finished')}
+            className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-all"
+            style={{
+              backgroundColor: selectedCategory === 'finished' ? 'rgb(var(--color-accent) / 0.1)' : 'rgb(var(--color-hover))',
+              color: selectedCategory === 'finished' ? 'rgb(var(--color-accent))' : 'rgb(var(--color-text-secondary))'
+            }}>
+
+              <CheckCircle size={14} />
+              <span>Finis</span>
+            </button>
+          {categories.map((category) =>
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
+            className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-all"
+            style={{
+              backgroundColor: selectedCategory === category.id ? getColorHex(category.color) : 'rgb(var(--color-hover))',
+              color: selectedCategory === category.id ? '#ffffff' : 'rgb(var(--color-text-secondary))',
+              boxShadow: selectedCategory === category.id ? `0 4px 12px ${getColorHex(category.color)}40` : 'none'
+            }}>
+
               {category.icon && <span>{category.icon}</span>}
               <span>{category.name}</span>
-            </motion.button>
-          ))}
+            </button>
+          )}
         </div>
-      </motion.div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AnimatePresence mode="popLayout">
           {filteredObjectives.map((objective, index) => {
             const progress = getProgress(objective.keyResults);
             const category = getCategoryById(objective.category);
-            const categoryStyle = category ? categoryColors[category.color as keyof typeof categoryColors] : categoryColors.blue;
-            
+
             return (
               <motion.div
                 key={objective.id}
@@ -461,798 +393,404 @@ const OKRPage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.02, y: -4 }}
                 className="rounded-lg shadow-sm border p-6 transition-all"
                 style={{
                   backgroundColor: 'rgb(var(--color-surface))',
                   borderColor: 'rgb(var(--color-border))'
-                }}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <motion.span 
-                        whileHover={{ scale: 1.05 }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${categoryStyle.bg} ${categoryStyle.text}`}
-                      >
-                        {category?.icon && <span>{category.icon}</span>}
-                        <span>{category?.name}</span>
-                      </motion.span>
-                      <span className="text-sm" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                        {new Date(objective.startDate).toLocaleDateString('fr-FR')} - {new Date(objective.endDate).toLocaleDateString('fr-FR')}
-                      </span>
-                      <motion.span 
-                        whileHover={{ scale: 1.1 }}
-                        className="text-sm flex items-center gap-1" 
-                        style={{ color: 'rgb(var(--color-text-muted))' }}
-                      >
-                        <Clock size={14} />
-                        {objective.estimatedTime} min
-                      </motion.span>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-1" style={{ color: 'rgb(var(--color-text-primary))' }}>{objective.title}</h3>
-                    <p className="text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>{objective.description}</p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <motion.button 
-                      whileHover={{ scale: 1.15, rotate: 5 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setEditingObjective(objective.id)}
-                      className="p-1 transition-colors"
-                      style={{ color: 'rgb(var(--color-text-muted))' }}
-                      title="Modifier l'objectif"
-                    >
-                      <Edit2 size={16} />
-                    </motion.button>
-                    <motion.button 
-                      whileHover={{ scale: 1.15, rotate: 5 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setDeletingObjective(objective.id)}
-                      className="p-1 transition-colors" 
-                      style={{ color: 'rgb(var(--color-text-muted))' }}
-                    >
-                      <Trash2 size={16} />
-                    </motion.button>
-                  </div>
-                </div>
+                }}>
 
-                <div className="mb-4 flex items-center gap-6">
-                  <div className="relative">
-                    <svg className="transform -rotate-90" width="80" height="80">
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r="32"
-                        stroke="rgb(var(--color-border-muted))"
-                        strokeWidth="8"
-                        fill="none"
-                      />
-                      <motion.circle
-                        cx="40"
-                        cy="40"
-                        r="32"
-                        stroke="rgb(var(--color-accent))"
-                        strokeWidth="8"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 32}`}
-                        initial={{ strokeDashoffset: 2 * Math.PI * 32 }}
-                        animate={{ strokeDashoffset: (2 * Math.PI * 32) * (1 - progress / 100) }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <motion.span 
-                        key={progress}
-                        initial={{ scale: 1.5, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="text-xl font-bold" 
-                        style={{ color: 'rgb(var(--color-text-primary))' }}
-                      >
-                        {progress}%
-                      </motion.span>
+                  <div className="flex justify-between items-start mb-4 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap" style={{ backgroundColor: 'rgb(var(--color-accent) / 0.1)', color: 'rgb(var(--color-accent))' }}>
+                          {category?.icon && <span>{category.icon}</span>}
+                          <span>{category?.name}</span>
+                        </span>
+                        <span className="text-xs sm:text-sm whitespace-nowrap" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                          {new Date(objective.startDate).toLocaleDateString('fr-FR')} - {new Date(objective.endDate).toLocaleDateString('fr-FR')}
+                        </span>
+                        <span className="text-xs sm:text-sm flex items-center gap-1 whitespace-nowrap" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                          <Clock size={14} />
+                          {objective.estimatedTime} min
+                        </span>
+                      </div>
+                      <h3 className="text-base sm:text-lg font-semibold mb-1 truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>{objective.title}</h3>
+                      <p className="text-xs sm:text-sm line-clamp-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>{objective.description}</p>
                     </div>
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Progression globale</span>
-                      <motion.span 
-                        key={progress}
-                        initial={{ x: 20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        className="text-sm font-bold" 
-                        style={{ color: 'rgb(var(--color-text-primary))' }}
-                      >
-                        {progress}%
-                      </motion.span>
-                    </div>
-                    <div className="w-full rounded-full h-2" style={{ backgroundColor: 'rgb(var(--color-border-muted))' }}>
-                      <motion.div
-                        className="h-2 rounded-full"
-                        style={{ backgroundColor: 'rgb(var(--color-accent))' }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
-                </div>
+                      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <button
+                          onClick={() => handleEditObjective(objective.id)}
+                          className="p-1.5 transition-colors hover:bg-hover rounded-md"
+                          style={{ color: 'rgb(var(--color-text-muted))' }}>
 
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>Résultats Clés</h4>
-                  {objective.keyResults.map((keyResult, krIndex) => {
-                    const krProgress = Math.min((keyResult.currentValue / keyResult.targetValue) * 100, 100);
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingObjective(objective.id)}
+                        className="p-1.5 transition-colors hover:bg-hover rounded-md text-red-500/70 hover:text-red-500"
+                        style={{ color: 'rgb(var(--color-text-muted))' }}>
+
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0">
+                      <svg className="transform -rotate-90" width="100%" height="100%" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="32" stroke="rgb(var(--color-border-muted))" strokeWidth="8" fill="none" />
+                        <circle cx="40" cy="40" r="32" stroke="rgb(var(--color-accent))" strokeWidth="8" fill="none" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 32}`} strokeDashoffset={2 * Math.PI * 32 * (1 - progress / 100)} />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg sm:text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{progress}%</span>
+                      </div>
+                    </div>
                     
-                    return (
-                      <motion.div
-                        key={keyResult.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: krIndex * 0.1 }}
-                        whileHover={{ scale: 1.02, x: 4 }}
-                        className="rounded-lg p-3 transition-all" 
-                        style={{ backgroundColor: 'rgb(var(--color-hover))' }}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>{keyResult.title}</span>
-                          <motion.span 
-                            whileHover={{ scale: 1.1 }}
-                            className="text-xs flex items-center gap-1" 
-                            style={{ color: 'rgb(var(--color-text-muted))' }}
-                          >
-                            <Clock size={12} />
-                            {keyResult.estimatedTime}min
-                          </motion.span>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="number"
-                            value={keyResult.currentValue}
-                            onChange={(e) => updateKeyResult(objective.id, keyResult.id, Number(e.target.value))}
-                            className="w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                            style={{
-                              backgroundColor: 'rgb(var(--color-surface))',
-                              color: 'rgb(var(--color-text-primary))',
-                              borderColor: 'rgb(var(--color-border))'
-                            }}
-                          />
-                          <span className="text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>/ {keyResult.targetValue}</span>
-                          <div className="flex-1 rounded-full h-1.5 ml-3" style={{ backgroundColor: 'rgb(var(--color-border-muted))' }}>
-                            <motion.div 
-                              className={`h-1.5 rounded-full ${
-                                keyResult.completed ? 'bg-green-500 dark:bg-green-400' : 'bg-primary-600 dark:bg-primary-500'
-                              }`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${krProgress}%` }}
-                              transition={{ duration: 0.8, ease: "easeOut", delay: krIndex * 0.1 }}
-                            />
+                    <div className="flex-1 w-full">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs sm:text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Progression globale</span>
+                        <span className="text-xs sm:text-sm font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{progress}%</span>
+                      </div>
+                      <div className="w-full rounded-full h-2" style={{ backgroundColor: 'rgb(var(--color-border-muted))' }}>
+                        <div className="h-2 rounded-full transition-all duration-500" style={{ backgroundColor: 'rgb(var(--color-accent))', width: `${progress}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-xs sm:text-sm font-medium mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>Résultats Clés</h4>
+                    {objective.keyResults.map((keyResult) => {
+                      const krProgress = Math.min(keyResult.currentValue / keyResult.targetValue * 100, 100);
+
+                      return (
+                        <div key={keyResult.id} className="rounded-lg p-3 transition-all" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
+                          <div className="flex justify-between items-center mb-3 gap-2">
+                            <span className="text-xs sm:text-sm font-medium truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>{keyResult.title}</span>
+                            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setSelectedKeyResultForModal({ kr: keyResult, obj: objective });
+                                  setShowAddTaskModal(true);
+                                }}
+                                className="p-1.5 rounded-md transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                                title="Créer une tâche">
+
+                                <CheckCircle size={14} className="text-blue-500" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedKeyResultForModal({ kr: keyResult, obj: objective });
+                                  setShowAddEventModal(true);
+                                }}
+                                className="p-1.5 rounded-md transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                                title="Planifier un événement">
+
+                                <Calendar size={14} className="text-purple-500" />
+                              </button>
+                              <span className="text-[10px] sm:text-xs flex items-center gap-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                                <Clock size={12} />
+                                {keyResult.estimatedTime}min
+                              </span>
+                            </div>
                           </div>
-                          <motion.span 
-                            key={krProgress}
-                            initial={{ scale: 1.3, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="text-xs font-medium w-10 text-right" 
-                            style={{ color: 'rgb(var(--color-text-secondary))' }}
-                          >
-                            {Math.round(krProgress)}%
-                          </motion.span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            );
+
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              <input
+                                type="number"
+                                value={keyResult.currentValue}
+                                onChange={(e) => updateKeyResult(objective.id, keyResult.id, Number(e.target.value))}
+                                className="w-16 sm:w-20 px-2 py-1 text-xs sm:text-sm border rounded focus:outline-none"
+                                style={{ backgroundColor: 'rgb(var(--color-surface))', color: 'rgb(var(--color-text-primary))', borderColor: 'rgb(var(--color-border))' }} />
+
+                              <span className="text-xs sm:text-sm whitespace-nowrap" style={{ color: 'rgb(var(--color-text-secondary))' }}>/ {keyResult.targetValue}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 w-full">
+                              <div className="flex-1 rounded-full h-1.5" style={{ backgroundColor: 'rgb(var(--color-border-muted))' }}>
+                                <div className={`h-1.5 rounded-full transition-all duration-500 ${keyResult.completed ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${krProgress}%` }} />
+                              </div>
+                              <span className="text-[10px] sm:text-xs font-medium w-8 text-right" style={{ color: 'rgb(var(--color-text-secondary))' }}>{Math.round(krProgress)}%</span>
+                            </div>
+                          </div>
+                        </div>);
+
+                    })}
+                  </div>
+              </motion.div>);
+
           })}
         </AnimatePresence>
       </div>
 
       <AnimatePresence>
-        {showCategoryManager && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <CategoryManagerModal
-              categories={categories}
-              onAddCategory={addCategory}
-              onUpdateCategory={updateCategory}
-              onDeleteCategory={deleteCategory}
-              onClose={() => setShowCategoryManager(false)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {editingObjective && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <OKRModal
-              okr={objectives.find(obj => obj.id === editingObjective)!}
-              isOpen={!!editingObjective}
-              onClose={() => setEditingObjective(null)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showAddObjective && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto transition-colors" 
-              style={{ backgroundColor: 'rgb(var(--color-surface))' }}
-            >
-              <div className="flex justify-between items-center px-6 py-4 border-b bg-gradient-to-r from-primary-50 dark:from-primary-900/20 to-purple-50 dark:to-purple-900/20 transition-colors" style={{ borderColor: 'rgb(var(--color-border))' }}>
-                <h2 className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>Nouvel Objectif</h2>
-                <motion.button 
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowAddObjective(false)}
-                  className="p-1 rounded-lg transition-colors"
-                  style={{ color: 'rgb(var(--color-text-muted))' }}
-                >
-                  <X size={20} />
-                </motion.button>
+        {showAddObjective &&
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-6 border-b dark:border-slate-700">
+                <h2 className="text-xl font-bold">{editingObjective ? 'Modifier l\'objectif' : 'Nouvel Objectif'}</h2>
+                <button onClick={() => {
+                  resetForm();
+                  setShowAddObjective(false);
+                }}><X size={20} /></button>
               </div>
+                <form onSubmit={handleSubmitObjective} className="p-6 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-5">
+                        <div>
+                          <label className="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200 block !whitespace-pre-line">Titre de l'objectif
 
-              <form onSubmit={handleSubmitObjective} className="p-6 space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                         Titre de l'objectif *
-                      </label>
-                      <input
-                        type="text"
-                        value={newObjective.title}
-                        onChange={(e) => setNewObjective({...newObjective, title: e.target.value})}
-                        className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-lg transition-colors"
-                        style={{
-                          backgroundColor: 'rgb(var(--color-surface))',
-                          color: 'rgb(var(--color-text-primary))',
-                          borderColor: 'rgb(var(--color-border))'
-                        }}
-                        placeholder="Ex: Améliorer mes compétences en français"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                         Description
-                      </label>
-                      <textarea
-                        rows={4}
-                        value={newObjective.description}
-                        onChange={(e) => setNewObjective({...newObjective, description: e.target.value})}
-                        className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none transition-colors"
-                        style={{
-                          backgroundColor: 'rgb(var(--color-surface))',
-                          color: 'rgb(var(--color-text-primary))',
-                          borderColor: 'rgb(var(--color-border))'
-                        }}
-                        placeholder="Décrivez votre objectif en détail..."
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                         Catégorie
-                      </label>
-                      <select 
-                        value={newObjective.category}
-                        onChange={(e) => setNewObjective({...newObjective, category: e.target.value})}
-                        className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                        style={{
-                          backgroundColor: 'rgb(var(--color-surface))',
-                          color: 'rgb(var(--color-text-primary))',
-                          borderColor: 'rgb(var(--color-border))'
-                        }}
-                      >
-                        {categories.map(category => (
-                          <option key={category.id} value={category.id}>
-                            {category.icon ? `${category.icon} ${category.name}` : category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                           Date début
-                        </label>
+                    </label>
                         <input
-                          type="date"
-                          value={newObjective.startDate}
-                          onChange={(e) => setNewObjective({...newObjective, startDate: e.target.value})}
-                          className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                          style={{
-                            backgroundColor: 'rgb(var(--color-surface))',
-                            color: 'rgb(var(--color-text-primary))',
-                            borderColor: 'rgb(var(--color-border))'
-                          }}
-                        />
+                      type="text"
+                      value={newObjective.title}
+                      onChange={(e) => setNewObjective({ ...newObjective, title: e.target.value })}
+                      className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      placeholder="Ex: Maîtriser le développement Fullstack"
+                      required />
+
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                           Date fin
+                        <label className="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200 block">
+                          Description
                         </label>
-                        <input
-                          type="date"
-                          value={newObjective.endDate}
-                          onChange={(e) => setNewObjective({...newObjective, endDate: e.target.value})}
-                          className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                          style={{
-                            backgroundColor: 'rgb(var(--color-surface))',
-                            color: 'rgb(var(--color-text-primary))',
-                            borderColor: 'rgb(var(--color-border))'
-                          }}
-                        />
+                        <textarea
+                      value={newObjective.description}
+                      onChange={(e) => setNewObjective({ ...newObjective, description: e.target.value })}
+                      className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                      placeholder="Quels sont les enjeux et la motivation derrière cet objectif ?"
+                      rows={4} />
+
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                         Temps estimé total (minutes) *
-                      </label>
-                      <input
-                        type="number"
-                        value={newObjective.estimatedTime}
-                        onChange={(e) => setNewObjective({...newObjective, estimatedTime: Number(e.target.value)})}
-                        min="1"
-                        max="1440"
-                        className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                        style={{
-                          backgroundColor: 'rgb(var(--color-surface))',
-                          color: 'rgb(var(--color-text-primary))',
-                          borderColor: 'rgb(var(--color-border))'
-                        }}
-                        placeholder="60"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
+                    <div className="space-y-5">
+                        <div>
+                          <label className="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200 block">
+                            Catégorie
+                          </label>
+                        <select
+                      value={newObjective.category}
+                      onChange={(e) => setNewObjective({ ...newObjective, category: e.target.value })}
+                      className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none">
 
-                <div className="bg-gradient-to-r from-gray-50 dark:from-gray-800 to-blue-50 dark:to-blue-900/20 p-6 rounded-lg border transition-colors" style={{ borderColor: 'rgb(var(--color-border))' }}>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                       Résultats Clés
-                      <span className="text-sm font-normal" style={{ color: 'rgb(var(--color-text-muted))' }}>({keyResults.length}/10)</span>
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={addKeyResult}
-                        disabled={keyResults.length >= 10}
-                        className="flex items-center gap-1 px-3 py-1 bg-green-600 dark:bg-green-500 text-white rounded-lg text-sm hover:bg-green-700 dark:hover:bg-green-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <Plus size={16} />
-                        <span>Ajouter</span>
-                      </motion.button>
+                          {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                        </select>
+                      </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200 block">
+                              Date de début
+                            </label>
+                          <input
+                        type="date"
+                        value={newObjective.startDate}
+                        onChange={(e) => setNewObjective({ ...newObjective, startDate: e.target.value })}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+
+                        </div>
+                          <div>
+                            <label className="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200 block">
+                              Date d'échéance
+                            </label>
+                          <input
+                        type="date"
+                        value={newObjective.endDate}
+                        onChange={(e) => setNewObjective({ ...newObjective, endDate: e.target.value })}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
+
+                        </div>
+                      </div>
+                      {(() => {
+                    const duration = calculateDuration(newObjective.startDate, newObjective.endDate);
+                    if (!duration) return null;
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className={`flex items-center gap-2 p-3 rounded-xl border text-sm transition-all ${
+                        duration.isError ?
+                        "bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-800/30 dark:text-red-400" :
+                        "bg-indigo-50 border-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:border-indigo-800/30 dark:text-indigo-400"}`
+                        }>
+
+                            <Clock size={16} className={duration.isError ? "text-red-500" : "text-indigo-500"} />
+                            <span>
+                              {duration.isError ? "" : "Temps prévu pour l'objectif : "}
+                              <strong className="font-bold">{duration.text}</strong>
+                            </span>
+                          </motion.div>);
+
+                  })()}
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    {keyResults.map((keyResult, index) => (
-                      <div key={index} className="p-4 rounded-lg border transition-colors" style={{
-                        backgroundColor: 'rgb(var(--color-surface))',
-                        borderColor: 'rgb(var(--color-border))'
-                      }}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-6 h-6 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center text-sm font-bold">
-                            {index + 1}
-                          </div>
-                          <span className="font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Résultat clé {index + 1}</span>
-                          {keyResults.length > 1 && (
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              type="button"
-                              onClick={() => removeKeyResult(index)}
-                              className="ml-auto p-1 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                              title="Supprimer ce résultat clé"
-                            >
-                              <Minus size={16} />
-                            </motion.button>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                          <div className="lg:col-span-2">
-                            <label className="block text-sm font-medium mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                              Description du résultat *
-                            </label>
-                            <input
-                              type="text"
-                              value={keyResult.title}
-                              onChange={(e) => updateKeyResultField(index, 'title', e.target.value)}
-                              placeholder={`Ex: Ficher ${index === 0 ? '20' : index === 1 ? '15' : '10'} textes littéraires`}
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                              style={{
-                                backgroundColor: 'rgb(var(--color-surface))',
-                                color: 'rgb(var(--color-text-primary))',
-                                borderColor: 'rgb(var(--color-border))'
-                              }}
-                            />
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-sm font-medium mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                                Objectif *
-                              </label>
-                              <input
-                                type="number"
-                                value={keyResult.targetValue}
-                                onChange={(e) => updateKeyResultField(index, 'targetValue', e.target.value)}
-                                placeholder="20"
-                                min="1"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                                style={{
-                                  backgroundColor: 'rgb(var(--color-surface))',
-                                  color: 'rgb(var(--color-text-primary))',
-                                  borderColor: 'rgb(var(--color-border))'
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                                Actuel
-                              </label>
-                              <input
-                                type="number"
-                                value={keyResult.currentValue}
-                                onChange={(e) => updateKeyResultField(index, 'currentValue', e.target.value)}
-                                placeholder="0"
-                                min="0"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                                style={{
-                                  backgroundColor: 'rgb(var(--color-surface))',
-                                  color: 'rgb(var(--color-text-primary))',
-                                  borderColor: 'rgb(var(--color-border))'
-                                }}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                              Temps (min) *
-                            </label>
-                            <input
-                              type="number"
-                              value={keyResult.estimatedTime}
-                              onChange={(e) => updateKeyResultField(index, 'estimatedTime', e.target.value)}
-                              placeholder="30"
-                              min="1"
-                              max="480"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                              style={{
-                                backgroundColor: 'rgb(var(--color-surface))',
-                                color: 'rgb(var(--color-text-primary))',
-                                borderColor: 'rgb(var(--color-border))'
-                              }}
-                            />
-                          </div>
-                        </div>
+                  <div className="border-t border-slate-100 dark:border-slate-700 pt-8">
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 relative inline-block">
+                              Résultats Clés
+                            </h3>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Définissez comment vous mesurerez votre succès</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <button
+                    type="button"
+                    onClick={addKeyResult}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
 
-                <div className="flex justify-center pt-4">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                        <Plus size={18} />
+                        Ajouter un KR
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {keyResults.map((kr, idx) =>
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="group relative p-4 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-wrap md:flex-nowrap gap-4 items-end transition-all hover:border-blue-300 dark:hover:border-blue-700 overflow-hidden">
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500/30 group-hover:bg-blue-500 transition-colors" />
+
+                          <div className="flex-1 min-w-[200px]">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Intitulé du résultat clé *</label>
+                            <input
+                        type="text"
+                        value={kr.title}
+                        onChange={(e) => updateKeyResultField(idx, 'title', e.target.value)}
+                        className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        placeholder="Ex: Valider 12 certifications" />
+
+                          </div>
+                          <div className="w-full md:w-32">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Objectif</label>
+                            <div className="relative">
+                              <input
+                          type="number"
+                          value={kr.targetValue}
+                          onChange={(e) => updateKeyResultField(idx, 'targetValue', e.target.value)}
+                          className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-8"
+                          placeholder="100" />
+
+                              <TrendingUp size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            </div>
+                          </div>
+                          <div className="w-full md:w-40">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Temps (min)</label>
+                            <div className="relative">
+                              <input
+                          type="number"
+                          value={kr.estimatedTime}
+                          onChange={(e) => updateKeyResultField(idx, 'estimatedTime', e.target.value)}
+                          className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-8"
+                          placeholder="60" />
+
+                              <Clock size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            </div>
+                          </div>
+                          {keyResults.length > 1 &&
+                    <button
+                      type="button"
+                      onClick={() => removeKeyResult(idx)}
+                      className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      title="Supprimer ce résultat">
+
+                              <Trash2 size={20} />
+                            </button>
+                    }
+                        </motion.div>
+                  )}
+                    </div>
+                  </div>
+
+                    <div className="flex justify-end gap-3 pt-6 border-t dark:border-slate-700">
+                      <button
+                    type="button"
+                    onClick={() => {
+                      resetForm();
+                      setShowAddObjective(false);
+                    }}
+                    className="px-6 py-2.5 rounded-lg font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+
+                        Annuler
+                      </button>
+                      <button
                     type="submit"
-                    className="bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all shadow-lg hover:shadow-xl"
-                  >
-                     Valider
-                  </motion.button>
-                </div>
-              </form>
+                    className="flex items-center justify-center gap-2 px-8 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/25 transform transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600">
+
+                        {editingObjective ? 'Mettre à jour' : 'Créer l\'objectif'}
+                      </button>
+                    </div>
+                </form>
             </motion.div>
-          </motion.div>
-        )}
+          </div>
+        }
       </AnimatePresence>
 
       <AnimatePresence>
-        {deletingObjective && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setDeletingObjective(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="rounded-xl shadow-2xl w-full max-w-md p-6 transition-colors"
-              style={{ backgroundColor: 'rgb(var(--color-surface))' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-lg font-semibold mb-2" style={{ color: 'rgb(var(--color-text-primary))' }}>
-                Confirmer la suppression
-              </h2>
-              <p className="text-sm mb-6" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                Êtes-vous sûr de vouloir supprimer cet objectif ? Cette action est irréversible et supprimera tous les résultats clés associés.
-              </p>
+        {deletingObjective &&
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl max-w-sm">
+              <h2 className="text-lg font-bold mb-4">Supprimer l'objectif ?</h2>
               <div className="flex justify-end gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setDeletingObjective(null)}
-                  className="px-4 py-2 rounded-lg font-medium border transition-colors"
-                  style={{
-                    borderColor: 'rgb(var(--color-border))',
-                    color: 'rgb(var(--color-text-primary))'
-                  }}
-                >
-                  Annuler
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => deletingObjective && deleteObjective(deletingObjective)}
-                  className="px-4 py-2 rounded-lg font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors"
-                >
-                  Supprimer
-                </motion.button>
+                <button onClick={() => setDeletingObjective(null)}>Annuler</button>
+                <button onClick={() => deleteObjective(deletingObjective)} className="bg-red-600 text-white px-4 py-2 rounded">Supprimer</button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
-
-const CategoryManagerModal: React.FC<{
-  categories: Category[];
-  onAddCategory: (category: Category) => void;
-  onUpdateCategory: (id: string, updates: Partial<Category>) => void;
-  onDeleteCategory: (id: string) => void;
-  onClose: () => void;
-}> = ({ categories, onAddCategory, onUpdateCategory, onDeleteCategory, onClose }) => {
-  const [newCategory, setNewCategory] = useState({ name: '', color: 'blue', icon: '' });
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [editData, setEditData] = useState({ name: '', color: 'blue', icon: '' });
-
-  const colorOptions = [
-    { value: 'blue', name: 'Bleu', color: '#3B82F6' },
-    { value: 'green', name: 'Vert', color: '#10B981' },
-    { value: 'red', name: 'Rouge', color: '#EF4444' },
-    { value: 'purple', name: 'Violet', color: '#8B5CF6' },
-    { value: 'orange', name: 'Orange', color: '#F97316' },
-    { value: 'yellow', name: 'Jaune', color: '#F59E0B' },
-    { value: 'pink', name: 'Rose', color: '#EC4899' },
-    { value: 'indigo', name: 'Indigo', color: '#6366F1' },
-  ];
-
-  const iconOptions = [
-    { value: '', label: 'Aucun emoji' },
-    { value: '📁', label: '📁 Dossier' },
-    { value: '👤', label: '👤 Personnel' },
-    { value: '💼', label: '💼 Professionnel' },
-    { value: '❤️', label: '❤️ Santé' },
-    { value: '📚', label: '📚 Apprentissage' },
-    { value: '🎯', label: '🎯 Objectif' },
-    { value: '🏆', label: '🏆 Réussite' },
-    { value: '💡', label: '💡 Idée' },
-    { value: '🚀', label: '🚀 Projet' },
-    { value: '⭐', label: '⭐ Important' },
-    { value: '🔥', label: '🔥 Urgent' },
-    { value: '💪', label: '💪 Effort' }
-  ];
-
-  const handleAddCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategory.name.trim()) return;
-
-    const category: Category = {
-      id: Date.now().toString(),
-      name: newCategory.name,
-      color: newCategory.color,
-      icon: newCategory.icon
-    };
-
-    onAddCategory(category);
-    setNewCategory({ name: '', color: 'blue', icon: '' });
-  };
-
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category.id);
-    setEditData({ name: category.name, color: category.color, icon: category.icon });
-  };
-
-  const handleSaveEdit = () => {
-    if (!editData.name.trim() || !editingCategory) return;
-    
-    onUpdateCategory(editingCategory, editData);
-    setEditingCategory(null);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transition-colors">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-purple-50 dark:to-purple-900/20">
-          <h2 className="text-xl font-bold text-primary-900 dark:text-white">Gérer les catégories</h2>
-          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6">
-          <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg mb-6 transition-colors">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Ajouter une nouvelle catégorie</h3>
-            <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom</label>
-                <input
-                  type="text"
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-600 text-gray-900 dark:text-white transition-colors"
-                  placeholder="Nom de la catégorie"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Icône</label>
-                <select
-                  value={newCategory.icon}
-                  onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-600 text-gray-900 dark:text-white transition-colors"
-                >
-                  {iconOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Couleur</label>
-                <select
-                  value={newCategory.color}
-                  onChange={(e) => setNewCategory({...newCategory, color: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-600 text-gray-900 dark:text-white transition-colors"
-                >
-                  {colorOptions.map(color => (
-                    <option key={color.value} value={color.value}>{color.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                >
-                  Ajouter
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Catégories existantes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {categories.map(category => (
-                <div key={category.id} className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 transition-colors">
-                  {editingCategory === category.id ? (
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        value={editData.name}
-                        onChange={(e) => setEditData({...editData, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-600 text-gray-900 dark:text-white transition-colors"
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <select
-                          value={editData.icon}
-                          onChange={(e) => setEditData({...editData, icon: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-600 text-gray-900 dark:text-white transition-colors"
-                        >
-                          {iconOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={editData.color}
-                          onChange={(e) => setEditData({...editData, color: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-slate-600 text-gray-900 dark:text-white transition-colors"
-                        >
-                          {colorOptions.map(color => (
-                            <option key={color.value} value={color.value}>{color.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setEditingCategory(null)}
-                          className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          onClick={handleSaveEdit}
-                          className="px-3 py-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
-                        >
-                          Sauvegarder
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 mb-3">
-                        {category.icon ? (
-                          <span className="text-2xl">{category.icon}</span>
-                        ) : (
-                          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                            <span className="text-xs text-gray-500 dark:text-gray-400">—</span>
-                          </div>
-                        )}
-                        <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
-                        <div 
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: colorOptions.find(c => c.value === category.color)?.color }}
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEditCategory(category)}
-                          className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => onDeleteCategory(category.id)}
-                          className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
+        }
+      </AnimatePresence>
+
+      <CategoryManager
+        isOpen={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        categories={categories}
+        onAdd={addCategory}
+        onUpdate={updateCategory}
+        onDelete={deleteCategory}
+      />
+
+      <AddTaskForm expanded={showAddTaskModal} onFormToggle={setShowAddTaskModal} initialData={selectedKeyResultForModal ? { name: `OKR: ${selectedKeyResultForModal.kr.title}`, estimatedTime: selectedKeyResultForModal.kr.estimatedTime, category: 'okr', priority: 2, isFromOKR: true } : undefined} />
+
+      
+      <AnimatePresence>
+        {selectedKeyResultForModal && showAddEventModal &&
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+
+            <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}>
+
+              <AddEventModal
+              isOpen={showAddEventModal}
+              onClose={() => setShowAddEventModal(false)}
+              task={{
+                id: selectedKeyResultForModal.kr.id,
+                name: selectedKeyResultForModal.kr.title,
+                completed: selectedKeyResultForModal.kr.completed,
+                priority: 2,
+                category: 'okr',
+                estimatedTime: selectedKeyResultForModal.kr.estimatedTime,
+                deadline: selectedKeyResultForModal.obj.endDate,
+                bookmarked: false
+              }}
+              onAddEvent={(event) => {
+                addEvent(event);
+                setShowAddEventModal(false);
+              }} />
+
+            </motion.div>
+          </motion.div>
+        }
+      </AnimatePresence>
+    </motion.div>);
+
 };
 
 export default OKRPage;
