@@ -13,78 +13,104 @@ const colorOptions = [
 
 type PeriodType = 'week' | 'month' | '3months' | 'all';
 
-const HabitTable: React.FC = () => {
-  const { habits, toggleHabitCompletion } = useTasks();
-  const [period, setPeriod] = useState<PeriodType>('week');
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const HabitTable: React.FC = () => {
+    const { habits, toggleHabitCompletion } = useTasks();
+    const [period, setPeriod] = useState<PeriodType>('week');
+    const [currentDate, setCurrentDate] = useState(new Date());
 
-  const periodOptions = [
-    { value: 'week' as PeriodType, label: 'Semaine', days: 7 },
-    { value: 'month' as PeriodType, label: 'Mois', days: 30 },
-    { value: '3months' as PeriodType, label: '3 Mois', days: 90 },
-    { value: 'all' as PeriodType, label: 'Depuis création', days: 0 },
-  ];
+    const parseLocalDate = (dateStr: string) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
 
-  const getOldestHabitDate = () => {
-    if (habits.length === 0) return new Date();
-    
-    let oldestDate = new Date();
-    habits.forEach(habit => {
-      const completionDates = Object.keys(habit.completions);
-      if (completionDates.length > 0) {
-        const habitOldestDate = new Date(Math.min(...completionDates.map(date => new Date(date).getTime())));
-        if (habitOldestDate < oldestDate) {
-          oldestDate = habitOldestDate;
+    const periodOptions = [
+      { value: 'week' as PeriodType, label: 'Semaine', days: 7 },
+      { value: 'month' as PeriodType, label: 'Mois', days: 30 },
+      { value: '3months' as PeriodType, label: '3 Mois', days: 90 },
+      { value: 'all' as PeriodType, label: 'Depuis création', days: 0 },
+    ];
+
+      const getOldestHabitDate = () => {
+        if (habits.length === 0) return new Date();
+        
+        let oldestDate = new Date();
+        oldestDate.setHours(0, 0, 0, 0);
+
+        habits.forEach(habit => {
+          // Prendre en compte la date de création si elle existe
+          if (habit.createdAt) {
+            const createdDate = new Date(habit.createdAt);
+            createdDate.setHours(0, 0, 0, 0);
+            if (createdDate < oldestDate) {
+              oldestDate = createdDate;
+            }
+          }
+
+          const completionDates = Object.keys(habit.completions);
+          if (completionDates.length > 0) {
+            const habitOldestDate = new Date(Math.min(...completionDates.map(date => parseLocalDate(date).getTime())));
+            habitOldestDate.setHours(0, 0, 0, 0);
+            if (habitOldestDate < oldestDate) {
+              oldestDate = habitOldestDate;
+            }
+          }
+        });
+        
+        // S'assurer qu'on montre au moins les 7 derniers jours même si c'est nouveau
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        
+        if (oldestDate > sevenDaysAgo) {
+          return sevenDaysAgo;
         }
-      }
-    });
-    
-    // Si aucune completion, utiliser une date par défaut (30 jours avant aujourd'hui)
-    if (oldestDate.getTime() === new Date().getTime()) {
-      oldestDate = new Date();
-      oldestDate.setDate(oldestDate.getDate() - 30);
-    }
-    
-    return oldestDate;
-  };
+        
+        return oldestDate;
+      };
 
-  const generateDays = () => {
-    const today = new Date();
-    const days = [];
-    
-    let startDate: Date;
-    let dayCount: number;
-    
-    if (period === 'all') {
-      startDate = getOldestHabitDate();
-      // S'assurer que le dernier jour est aujourd'hui
-      dayCount = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    } else {
-      const selectedPeriod = periodOptions.find(p => p.value === period);
-      dayCount = selectedPeriod?.days || 7;
-      
-      // Pour toutes les périodes, le dernier jour visible est la date actuelle
-      startDate = new Date(currentDate);
-      startDate.setDate(currentDate.getDate() - dayCount + 1);
-    }
-    
-    for (let i = 0; i < dayCount; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      
-      days.push({
-        date: date.toISOString().split('T')[0],
-        dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
-        dayNumber: date.getDate(),
-        monthName: date.toLocaleDateString('fr-FR', { month: 'short' }),
-        isToday: date.toDateString() === today.toDateString(),
-        isPast: date < today,
-        isFuture: date > today
-      });
-    }
-    
-    return days;
-  };
+      const generateDays = () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = [];
+        
+        let startDate: Date;
+        let dayCount: number;
+        
+        if (period === 'all') {
+          startDate = getOldestHabitDate();
+          startDate.setHours(0, 0, 0, 0);
+          // S'assurer que le dernier jour est aujourd'hui
+          const todayEnd = new Date(today);
+          todayEnd.setHours(23, 59, 59, 999);
+          dayCount = Math.max(1, Math.ceil((todayEnd.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+        } else {
+          const selectedPeriod = periodOptions.find(p => p.value === period);
+          dayCount = selectedPeriod?.days || 7;
+          
+          // Pour toutes les périodes, le dernier jour visible est la date actuelle
+          startDate = new Date(currentDate);
+          startDate.setHours(0, 0, 0, 0);
+          startDate.setDate(currentDate.getDate() - dayCount + 1);
+        }
+        
+        for (let i = 0; i < dayCount; i++) {
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + i);
+          date.setHours(0, 0, 0, 0);
+          
+          days.push({
+            date: date.toLocaleDateString('en-CA'),
+            dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
+            dayNumber: date.getDate(),
+            monthName: date.toLocaleDateString('fr-FR', { month: 'short' }),
+            isToday: date.toDateString() === today.toDateString(),
+            isPast: date < today,
+            isFuture: date > today
+          });
+        }
+        
+        return days;
+      };
 
   const days = generateDays();
 
@@ -96,15 +122,18 @@ const HabitTable: React.FC = () => {
     const newDate = new Date(currentDate);
     
     switch (period) {
-      case 'week':
+      case 'week': {
         newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
         break;
-      case 'month':
+      }
+      case 'month': {
         newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
         break;
-      case '3months':
+      }
+      case '3months': {
         newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 3 : -3));
         break;
+      }
       default:
         return;
     }
@@ -323,46 +352,53 @@ const HabitTable: React.FC = () => {
                     </div>
                   </div>
                 </td>
-                {days.map(day => {
-                  const isCompleted = habit.completions[day.date];
-                  return (
-                    <td key={day.date} className="p-2 text-center transition-colors">
-                      <button
-                        onClick={() => handleDayClick(habit.id, day.date)}
-                        disabled={day.isFuture}
-                        className="w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center mx-auto"
-                        style={{
-                          backgroundColor: isCompleted ? '#10B981' : day.isFuture ? 'rgb(var(--color-hover))' : day.isToday ? 'rgb(var(--color-accent) / 0.1)' : 'transparent',
-                          borderColor: isCompleted ? '#10B981' : day.isToday ? 'rgb(var(--color-accent))' : 'rgb(var(--color-border))',
-                          color: isCompleted ? 'white' : day.isFuture ? 'rgb(var(--color-text-muted))' : 'rgb(var(--color-text-secondary))',
-                          cursor: day.isFuture ? 'not-allowed' : 'pointer'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!day.isFuture && !isCompleted) {
-                            e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-                            e.currentTarget.style.borderColor = 'rgb(var(--color-text-muted))';
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!day.isFuture && !isCompleted) {
-                            e.currentTarget.style.backgroundColor = day.isToday ? 'rgb(var(--color-accent) / 0.1)' : 'transparent';
-                            e.currentTarget.style.borderColor = day.isToday ? 'rgb(var(--color-accent))' : 'rgb(var(--color-border))';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }
-                        }}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle size={14} />
-                        ) : day.isFuture ? (
-                          <Circle size={14} />
-                        ) : (
-                          <Circle size={14} />
-                        )}
-                      </button>
-                    </td>
-                  );
-                })}
+                  {days.map(day => {
+                    const isCompleted = habit.completions[day.date];
+                    const createdDate = habit.createdAt ? habit.createdAt.split('T')[0] : '';
+                    const isBeforeCreation = createdDate ? day.date < createdDate : false;
+                    
+                    return (
+                        <td key={day.date} className="p-2 text-center transition-colors">
+                          <button
+                            onClick={() => handleDayClick(habit.id, day.date)}
+                            disabled={day.isFuture || isBeforeCreation}
+                            className="w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center mx-auto"
+                            style={{
+                              backgroundColor: isCompleted ? '#10B981' : (day.isFuture || isBeforeCreation) ? 'rgb(var(--color-hover) / 0.5)' : day.isToday ? 'rgb(var(--color-accent) / 0.1)' : 'transparent',
+                              borderColor: isCompleted ? '#10B981' : day.isToday ? 'rgb(var(--color-accent))' : (day.isFuture || isBeforeCreation) ? 'transparent' : 'rgb(var(--color-border))',
+                              color: isCompleted ? 'white' : (day.isFuture || isBeforeCreation) ? 'rgb(var(--color-text-muted) / 0.3)' : 'rgb(var(--color-text-secondary))',
+                              cursor: (day.isFuture || isBeforeCreation) ? 'not-allowed' : 'pointer',
+                              opacity: isBeforeCreation ? 0.3 : 1,
+                              filter: isBeforeCreation ? 'grayscale(1)' : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!day.isFuture && !isBeforeCreation && !isCompleted) {
+                                e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+                                e.currentTarget.style.borderColor = 'rgb(var(--color-text-muted))';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!day.isFuture && !isBeforeCreation && !isCompleted) {
+                                e.currentTarget.style.backgroundColor = day.isToday ? 'rgb(var(--color-accent) / 0.1)' : 'transparent';
+                                e.currentTarget.style.borderColor = day.isToday ? 'rgb(var(--color-accent))' : 'rgb(var(--color-border))';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }
+                            }}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle size={14} />
+                            ) : (day.isFuture || isBeforeCreation) ? (
+                              <Circle size={14} className="opacity-10" />
+                            ) : (
+                              <Circle size={14} />
+                            )}
+                          </button>
+                        </td>
+
+                    );
+                  })}
+
                 <td className="p-4 text-center transition-colors">
                   <div className="flex items-center justify-center gap-1">
                     <Flame size={16} className="text-orange-500" />
