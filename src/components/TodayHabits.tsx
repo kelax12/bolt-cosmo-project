@@ -1,4 +1,4 @@
-import React from 'react';
+iimport React from 'react';
 import { Repeat, Clock, CheckCircle, Circle } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +7,7 @@ const TodayHabits: React.FC = () => {
   const { habits, toggleHabitCompletion } = useTasks();
   const navigate = useNavigate();
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
 
   const todayHabits = habits.map((habit) => ({
     ...habit,
