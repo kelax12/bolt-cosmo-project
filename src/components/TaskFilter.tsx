@@ -113,10 +113,9 @@ const TaskFilter: React.FC<TaskFilterProps> = ({
                   <option value="priority">Par priorité</option>
                   <option value="deadline">Par échéance</option>
                   <option value="createdAt">Par date de création</option>
-                  <option value="name">Par nom</option>
-                  <option value="category">Par catégorie</option>
-                  <option value="completed">Tâches complétées</option>
-                </select>
+                    <option value="name">Par nom</option>
+                    <option value="category">Par catégorie</option>
+                  </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2" style={{ color: 'rgb(var(--color-text-muted))' }}>
                   <ChevronDown size={16} aria-hidden="true" />
                 </div>
@@ -130,7 +129,7 @@ const TaskFilter: React.FC<TaskFilterProps> = ({
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm border shrink-0 ${
                 showAdvancedFilters || hasActiveFilters
-                  ? 'bg-blue-600 text-white border-blue-700'
+                  ? 'bg-blue-600 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-600 shadow-md'
                   : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700'
               }`}
               aria-label={showAdvancedFilters ? "Masquer les filtres avancés" : "Afficher les filtres avancés"}
