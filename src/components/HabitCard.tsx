@@ -208,31 +208,31 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, externalIsEditing, onExter
               </div>
             </div>
             
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                  showDetails 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <Calendar size={16} />
-              </button>
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                <Edit2 size={16} />
-              </button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button 
-                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </AlertDialogTrigger>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    showDetails 
+                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Calendar size={16} />
+                </button>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button 
+                        className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
@@ -277,13 +277,13 @@ const HabitCard: React.FC<HabitCardProps> = ({ habit, externalIsEditing, onExter
                                 : 'border-slate-200 dark:border-slate-700'
                             } ${
                               isCompleted 
-                                ? 'border-green-500 text-white' 
+                                ? 'border-blue-500 text-white' 
                                 : isBeforeCreation
                                   ? 'opacity-30 grayscale cursor-not-allowed bg-slate-100 dark:bg-slate-900 border-transparent'
                                   : 'hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
                             style={{
-                              backgroundColor: isCompleted ? '#10B981' : undefined
+                              backgroundColor: isCompleted ? '#2563EB' : undefined
                             }}
                           >
                             {isCompleted ? (
