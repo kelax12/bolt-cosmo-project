@@ -31,18 +31,30 @@ const CollaboratorItem: React.FC<CollaboratorItemProps> = ({
 
   return (
     <div
-      className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all shadow-sm group"
+      className="flex items-center justify-between p-3 rounded-xl border transition-all shadow-sm group"
+      style={{ 
+        backgroundColor: 'rgb(var(--color-surface))',
+        borderColor: 'rgb(var(--color-border))'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'rgb(var(--color-accent))';
+        e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'rgb(var(--color-border))';
+        e.currentTarget.style.backgroundColor = 'rgb(var(--color-surface))';
+      }}
     >
       <div className="flex items-center gap-3 overflow-hidden">
         <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-semibold text-sm ${
-          isEmoji ? 'text-2xl bg-slate-100 dark:bg-slate-700/50' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-        }`}>
+          isEmoji ? 'text-2xl' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+        }`} style={isEmoji ? { backgroundColor: 'rgb(var(--color-hover))' } : {}}>
           {avatar ? (isEmoji ? avatar : <img src={avatar} alt={name} className="w-full h-full rounded-full object-cover" />) : getInitials(name || id)}
         </div>
         <div className="overflow-hidden">
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{name || id}</p>
+          <p className="text-sm font-semibold truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>{name || id}</p>
           {email && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+            <div className="flex items-center gap-1.5 text-xs truncate" style={{ color: 'rgb(var(--color-text-muted))' }}>
               <Mail size={12} className="shrink-0" />
               <span className="truncate">{email}</span>
             </div>
