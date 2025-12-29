@@ -306,71 +306,109 @@ const AgendaPage: React.FC = () => {
                     <span className="font-medium text-sm lg:text-base">Nouveau</span>
                   </motion.button>
                 
-                <div className="flex items-center gap-1 col-span-1 lg:w-auto">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => calendarRef.current?.getApi().prev()}
-                    className="p-2 rounded-lg transition-colors"
-                    style={{ color: 'rgb(var(--color-text-secondary))' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-
-                    <ChevronLeft size={18} />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => calendarRef.current?.getApi().next()}
-                    className="p-2 rounded-lg transition-colors"
-                    style={{ color: 'rgb(var(--color-text-secondary))' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-
-                    <ChevronRight size={18} />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => calendarRef.current?.getApi().today()}
-                    className="px-2 py-1.5 text-xs font-medium rounded-lg transition-colors"
-                    style={{ color: 'rgb(var(--color-text-secondary))' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-
-                    Aujourd'hui
-                  </motion.button>
-                </div>
-              </div>
-
-              <motion.div
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="contents lg:flex lg:items-center lg:gap-3 lg:w-auto">
-
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 col-span-1 lg:mr-2 lg:w-auto justify-center">
+                  <div className="flex items-center gap-1 col-span-1 lg:w-auto">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={handleZoomIn}
-                      disabled={zoomLevel === 0}
-                      title="Zoom avant"
-                      className={`p-1.5 rounded-md transition-all ${zoomLevel === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white dark:hover:bg-gray-700 shadow-sm'}`}
-                      style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                      <ZoomIn size={20} />
+                      onClick={() => calendarRef.current?.getApi().prev()}
+                      className="p-2 rounded-lg transition-colors hover:text-blue-600"
+                      style={{ color: 'rgb(var(--color-text-secondary))' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+                        e.currentTarget.style.color = '#2563eb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
+                      }}>
+
+                      <ChevronLeft size={18} />
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={handleZoomOut}
-                      disabled={zoomLevel === zoomDurations.length - 1}
-                      title="Zoom arrière"
-                      className={`p-1.5 rounded-md transition-all ${zoomLevel === zoomDurations.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white dark:hover:bg-gray-700 shadow-sm'}`}
-                      style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                      <ZoomOut size={20} />
+                      onClick={() => calendarRef.current?.getApi().next()}
+                      className="p-2 rounded-lg transition-colors hover:text-blue-600"
+                      style={{ color: 'rgb(var(--color-text-secondary))' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+                        e.currentTarget.style.color = '#2563eb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
+                      }}>
+
+                      <ChevronRight size={18} />
                     </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => calendarRef.current?.getApi().today()}
+                      className="px-2 py-1.5 text-xs font-medium rounded-lg transition-colors hover:text-blue-600"
+                      style={{ color: 'rgb(var(--color-text-secondary))' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
+                        e.currentTarget.style.color = '#2563eb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
+                      }}>
+
+                      Aujourd'hui
+                    </motion.button>
+                  </div>
                 </div>
+
+                <motion.div
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="contents lg:flex lg:items-center lg:gap-3 lg:w-auto">
+
+                  <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 col-span-1 lg:mr-2 lg:w-auto justify-center">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={handleZoomIn}
+                        disabled={zoomLevel === 0}
+                        title="Zoom avant"
+                        className={`p-1.5 rounded-md transition-all ${zoomLevel === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white dark:hover:bg-gray-700 shadow-sm'}`}
+                        style={{ color: zoomLevel === 0 ? 'rgb(var(--color-text-secondary))' : undefined }}
+                        onMouseEnter={(e) => {
+                          if (zoomLevel !== 0) {
+                            e.currentTarget.style.color = '#2563eb';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (zoomLevel !== 0) {
+                            e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
+                          }
+                        }}>
+                        <ZoomIn size={20} />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={handleZoomOut}
+                        disabled={zoomLevel === zoomDurations.length - 1}
+                        title="Zoom arrière"
+                        className={`p-1.5 rounded-md transition-all ${zoomLevel === zoomDurations.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white dark:hover:bg-gray-700 shadow-sm'}`}
+                        style={{ color: zoomLevel === zoomDurations.length - 1 ? 'rgb(var(--color-text-secondary))' : undefined }}
+                        onMouseEnter={(e) => {
+                          if (zoomLevel !== zoomDurations.length - 1) {
+                            e.currentTarget.style.color = '#2563eb';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (zoomLevel !== zoomDurations.length - 1) {
+                            e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
+                          }
+                        }}>
+                        <ZoomOut size={20} />
+                      </motion.button>
+                  </div>
 
                 <div className="flex rounded-lg p-0.5 col-span-2 lg:col-span-1 lg:w-auto" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
                   {['timeGridDay', 'timeGridWeek', 'dayGridMonth'].map((view, index) =>
