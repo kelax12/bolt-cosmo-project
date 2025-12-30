@@ -1,139 +1,286 @@
 import React, { useState } from 'react';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import { useTasks } from '../context/TaskContext';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { ChevronLeft, ChevronRight, Calendar, LayoutGrid } from 'lucide-react';
 
 const DeadlineCalendar: React.FC = () => {
-  const { tasks, colorSettings, categories } = useTasks();
-  const [currentView, setCurrentView] = useState('dayGridMonth');
+  const { tasks, categories } = useTasks();
+  const [currentView, setCurrentView] = useState<'month' | 'week'>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Convert tasks to calendar events based on deadlines
   const deadlineEvents = tasks
     .filter(task => !task.completed)
     .map(task => ({
       id: task.id,
       title: task.name,
-      date: task.deadline.split('T')[0], // Extract date part
+      date: new Date(task.deadline),
       backgroundColor: getCategoryColor(task.category),
-      borderColor: getCategoryColor(task.category),
-      textColor: '#ffffff',
-      extendedProps: {
-        priority: task.priority,
-        category: task.category,
-        estimatedTime: task.estimatedTime,
-        categoryName: colorSettings[task.category] || 'Sans catégorie'
-      }
+      priority: task.priority,
+      category: task.category,
+      estimatedTime: task.estimatedTime,
     }));
 
   function getCategoryColor(category: string) {
     return categories.find(cat => cat.id === category)?.color || '#6B7280';
   }
 
-  const renderEventContent = (eventInfo: any) => {
-    const { event } = eventInfo;
-    const priority = event.extendedProps.priority;
-    const categoryName = event.extendedProps.categoryName;
+  const getWeekDays = (date: Date) => {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+    start.setDate(diff);
     
-    return (
-      <div className="p-1 text-xs">
-        <div className="font-medium truncate">{event.title}</div>
-        <div className="text-xs opacity-90">
-          P{priority} • {categoryName}
-        </div>
-      </div>
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  };
+
+  const getMonthDays = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPadding = (firstDay.getDay() + 6) % 7;
+    
+    const days = [];
+    for (let i = startPadding - 1; i >= 0; i--) {
+      const d = new Date(year, month, -i);
+      days.push({ date: d, isCurrentMonth: false });
+    }
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+    }
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) {
+      days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
+    }
+    return days;
+  };
+
+  const getEventsForDate = (date: Date) => {
+    return deadlineEvents.filter(event => 
+      event.date.toDateString() === date.toDateString()
     );
   };
 
+  const isToday = (date: Date) => {
+    return date.toDateString() === new Date().toDateString();
+  };
+
+  const navigatePrev = () => {
+    const newDate = new Date(currentDate);
+    if (currentView === 'week') {
+      newDate.setDate(newDate.getDate() - 7);
+    } else {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const navigateNext = () => {
+    const newDate = new Date(currentDate);
+    if (currentView === 'week') {
+      newDate.setDate(newDate.getDate() + 7);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const formatMonth = (date: Date) => {
+    return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  };
+
+  const formatWeekRange = (date: Date) => {
+    const days = getWeekDays(date);
+    const start = days[0];
+    const end = days[6];
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.getDate()} - ${end.getDate()} ${start.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+    }
+    return `${start.getDate()} ${start.toLocaleDateString('fr-FR', { month: 'short' })} - ${end.getDate()} ${end.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}`;
+  };
+
+  const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+  const weekDays = getWeekDays(currentDate);
+  const monthDays = getMonthDays(currentDate);
+
   return (
-    <div className="p-6 rounded-lg shadow-sm border transition-colors" style={{
+    <div className="rounded-2xl border overflow-hidden transition-colors" style={{
       backgroundColor: 'rgb(var(--color-surface))',
       borderColor: 'rgb(var(--color-border))'
     }}>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>Calendrier des deadlines</h2>
-        
-        <div className="flex rounded-lg p-1 transition-colors" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
+      <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'rgb(var(--color-border))' }}>
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setCurrentView('dayGridMonth')}
-            className="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+            onClick={navigatePrev}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" style={{ color: 'rgb(var(--color-text-secondary))' }} />
+          </button>
+          <h2 className="text-lg font-semibold capitalize min-w-[200px] text-center" style={{ color: 'rgb(var(--color-text-primary))' }}>
+            {currentView === 'week' ? formatWeekRange(currentDate) : formatMonth(currentDate)}
+          </h2>
+          <button
+            onClick={navigateNext}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" style={{ color: 'rgb(var(--color-text-secondary))' }} />
+          </button>
+        </div>
+        
+        <div className="flex rounded-xl p-1 gap-1" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
+          <button
+            onClick={() => setCurrentView('week')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              currentView === 'week' 
+                ? 'bg-blue-500 text-white shadow-md' 
+                : 'hover:bg-white/50 dark:hover:bg-slate-700/50'
+            }`}
             style={{
-              backgroundColor: currentView === 'dayGridMonth' ? 'rgb(var(--color-surface))' : 'transparent',
-              color: currentView === 'dayGridMonth' ? 'rgb(var(--color-text-primary))' : 'rgb(var(--color-text-secondary))',
-              boxShadow: currentView === 'dayGridMonth' ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (currentView !== 'dayGridMonth') {
-                e.currentTarget.style.color = 'rgb(var(--color-text-primary))';
-                e.currentTarget.style.backgroundColor = 'rgb(var(--color-active))';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentView !== 'dayGridMonth') {
-                e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
+              color: currentView === 'week' ? '#fff' : 'rgb(var(--color-text-secondary))'
             }}
           >
-            Mois
+            <Calendar className="w-4 h-4" />
+            Semaine
           </button>
           <button
-            onClick={() => setCurrentView('timeGridWeek')}
-            className="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+            onClick={() => setCurrentView('month')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              currentView === 'month' 
+                ? 'bg-blue-500 text-white shadow-md' 
+                : 'hover:bg-white/50 dark:hover:bg-slate-700/50'
+            }`}
             style={{
-              backgroundColor: currentView === 'timeGridWeek' ? 'rgb(var(--color-surface))' : 'transparent',
-              color: currentView === 'timeGridWeek' ? 'rgb(var(--color-text-primary))' : 'rgb(var(--color-text-secondary))',
-              boxShadow: currentView === 'timeGridWeek' ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
+              color: currentView === 'month' ? '#fff' : 'rgb(var(--color-text-secondary))'
             }}
           >
-            Semaine
+            <LayoutGrid className="w-4 h-4" />
+            Mois
           </button>
         </div>
       </div>
-      
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin]}
-        initialView={currentView}
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: ''
-        }}
-        events={deadlineEvents}
-        height="auto"
-        locale="fr"
-        eventContent={renderEventContent}
-        eventDisplay="block"
-        dayMaxEvents={3}
-        moreLinkText="plus"
-        eventDidMount={(info) => {
-          // Add tooltip with task details
-          info.el.title = `${info.event.title}\nPriorité: ${info.event.extendedProps.priority}\nCatégorie: ${info.event.extendedProps.categoryName}\nTemps estimé: ${info.event.extendedProps.estimatedTime}min`;
-        }}
-      />
-      
-      <div className="mt-4 flex flex-wrap gap-4 text-xs" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-red-500 rounded"></div>
-          <span>{colorSettings.red}</span>
+
+      {currentView === 'week' ? (
+        <div>
+          <div className="grid grid-cols-7 border-b" style={{ borderColor: 'rgb(var(--color-border))' }}>
+            {weekDays.map((day, idx) => (
+              <div 
+                key={idx} 
+                className={`p-4 text-center border-r last:border-r-0 ${isToday(day) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                style={{ borderColor: 'rgb(var(--color-border))' }}
+              >
+                <div className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                  {dayNames[idx]}
+                </div>
+                <div className={`text-2xl font-bold ${isToday(day) ? 'text-blue-600 dark:text-blue-400' : ''}`} style={{ color: isToday(day) ? undefined : 'rgb(var(--color-text-primary))' }}>
+                  {day.getDate()}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7 min-h-[300px]">
+            {weekDays.map((day, idx) => {
+              const dayEvents = getEventsForDate(day);
+              return (
+                <div 
+                  key={idx} 
+                  className={`p-2 border-r last:border-r-0 ${isToday(day) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                  style={{ borderColor: 'rgb(var(--color-border))' }}
+                >
+                  <div className="space-y-2">
+                    {dayEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className="p-2 rounded-lg text-white text-xs font-medium shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        style={{ backgroundColor: event.backgroundColor }}
+                        title={`${event.title}\nPriorité: ${event.priority}\nTemps: ${event.estimatedTime}min`}
+                      >
+                        <div className="truncate font-semibold">{event.title}</div>
+                        <div className="opacity-80 text-[10px] mt-1">P{event.priority}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded"></div>
-          <span>{colorSettings.blue}</span>
+      ) : (
+        <div>
+          <div className="grid grid-cols-7 border-b" style={{ borderColor: 'rgb(var(--color-border))' }}>
+            {dayNames.map((name, idx) => (
+              <div 
+                key={idx} 
+                className="p-3 text-center text-xs font-semibold uppercase tracking-wider"
+                style={{ color: 'rgb(var(--color-text-muted))' }}
+              >
+                {name}
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7">
+            {monthDays.map(({ date, isCurrentMonth }, idx) => {
+              const dayEvents = getEventsForDate(date);
+              return (
+                <div 
+                  key={idx} 
+                  className={`min-h-[100px] p-2 border-r border-b last:border-r-0 ${
+                    !isCurrentMonth ? 'opacity-40' : ''
+                  } ${isToday(date) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  style={{ borderColor: 'rgb(var(--color-border))' }}
+                >
+                  <div className={`text-sm font-medium mb-2 ${isToday(date) ? 'text-blue-600 dark:text-blue-400' : ''}`} style={{ color: isToday(date) ? undefined : 'rgb(var(--color-text-primary))' }}>
+                    {date.getDate()}
+                  </div>
+                  <div className="space-y-1">
+                    {dayEvents.slice(0, 2).map((event) => (
+                      <div
+                        key={event.id}
+                        className="px-2 py-1 rounded text-white text-[10px] font-medium truncate"
+                        style={{ backgroundColor: event.backgroundColor }}
+                        title={event.title}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                    {dayEvents.length > 2 && (
+                      <div className="text-[10px] font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                        +{dayEvents.length - 2} autres
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded"></div>
-          <span>{colorSettings.green}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-purple-500 rounded"></div>
-          <span>{colorSettings.purple}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-orange-500 rounded"></div>
-          <span>{colorSettings.orange}</span>
+      )}
+
+      <div className="p-4 border-t" style={{ borderColor: 'rgb(var(--color-border))' }}>
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <div 
+              key={category.id} 
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
+              style={{ 
+                backgroundColor: `${category.color}15`,
+                color: category.color
+              }}
+            >
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: category.color }}
+              />
+              {category.name}
+            </div>
+          ))}
         </div>
       </div>
     </div>
