@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TaskTable from '../components/TaskTable';
 import TaskFilter from '../components/TaskFilter';
 import AddTaskForm from '../components/AddTaskForm';
@@ -20,6 +20,22 @@ const TasksPage: React.FC = () => {
     const [selectedListId, setSelectedListId] = useState<string | null>(null);
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [summaryAtBottom, setSummaryAtBottom] = useState(true);
+  const bottomSummaryRef = useRef<HTMLDivElement>(null);
+
+  const handleToggleSummaryPosition = () => {
+    const newPosition = !summaryAtBottom;
+    setSummaryAtBottom(newPosition);
+    
+    if (newPosition && bottomSummaryRef.current) {
+      setTimeout(() => {
+        bottomSummaryRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  };
 
   useEffect(() => {
     const state = location.state as { openTaskId?: string } | null;
@@ -185,13 +201,13 @@ const TasksPage: React.FC = () => {
           )}
         </AnimatePresence>
         
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 items-start">
+          <div className={`grid grid-cols-1 gap-8 items-start ${summaryAtBottom ? '' : 'xl:grid-cols-4'}`}>
 
           <motion.div 
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="xl:col-span-3"
+            className={summaryAtBottom ? "" : "xl:col-span-3"}
           >
             <div className="card p-6">
                 {!showCompleted && !showAddTaskForm && (
@@ -359,15 +375,50 @@ const TasksPage: React.FC = () => {
             </div>
           </motion.div>
           
-            <motion.div 
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="xl:col-span-1"
-            >
-              <TasksSummary />
-            </motion.div>
+          <AnimatePresence>
+            {!summaryAtBottom && (
+              <motion.div 
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 20, opacity: 0 }}
+                transition={{ delay: 0.5 }}
+                className="xl:col-span-1 hidden xl:block"
+              >
+                <TasksSummary 
+                  onTogglePosition={handleToggleSummaryPosition}
+                  isBottomPosition={false}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          <motion.div 
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="xl:col-span-1 xl:hidden"
+          >
+            <TasksSummary />
+          </motion.div>
         </div>
+        
+        <AnimatePresence>
+          {summaryAtBottom && (
+            <motion.div 
+              ref={bottomSummaryRef}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8 hidden xl:block"
+            >
+              <TasksSummary 
+                onTogglePosition={handleToggleSummaryPosition}
+                isBottomPosition={true}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
