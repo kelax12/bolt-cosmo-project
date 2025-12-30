@@ -3,6 +3,7 @@ import { X, Clock, Plus } from "lucide-react";
 import { CalendarEvent, useTasks } from "../context/TaskContext";
 import { motion, AnimatePresence } from "framer-motion";
 import ColorSettingsModal from "./ColorSettingsModal";
+import { DatePicker } from "./ui/date-picker";
 
 type EditEventModalProps = {
   isOpen: boolean;
@@ -210,18 +211,12 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                       <div className="relative flex-1">
-                          <input
-                            type="date"
+                          <DatePicker
                             value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            placeholder="dd/mm/aaaa"
-                            className="w-full px-3 py-2 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            style={{
-                              backgroundColor: 'rgb(var(--color-surface))',
-                              color: 'rgb(var(--color-text-primary))',
-                              borderColor: 'rgb(var(--color-border))'
-                            }}
-                            required />
+                            onChange={(date) => setStartDate(date)}
+                            placeholder="Sélectionner une date"
+                            className="h-[38px]"
+                          />
                       </div>
 
                       <div className="relative w-full sm:w-32">
@@ -267,18 +262,12 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                         <div className="relative flex-1">
-                          <input
-                            type="date"
+                          <DatePicker
                             value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            placeholder="dd/mm/aaaa"
-                            className="w-full px-3 py-2 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            style={{
-                              backgroundColor: 'rgb(var(--color-surface))',
-                              color: 'rgb(var(--color-text-primary))',
-                              borderColor: 'rgb(var(--color-border))'
-                            }}
-                            required />
+                            onChange={(date) => setEndDate(date)}
+                            placeholder="Sélectionner une date"
+                            className="h-[38px]"
+                          />
                         </div>
 
                         <div className="relative w-full sm:w-32">
