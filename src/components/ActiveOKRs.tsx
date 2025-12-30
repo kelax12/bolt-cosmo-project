@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, TrendingUp } from 'lucide-react';
+import { Target, TrendingUp, Clock } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 
 const ActiveOKRs: React.FC = () => {
@@ -49,6 +49,12 @@ const ActiveOKRs: React.FC = () => {
               </div>
               
               <div className="text-sm text-gray-600">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock size={14} className="text-gray-400" />
+                  <span className="font-medium">
+                    {okr.keyResults.reduce((sum: number, kr: any) => sum + (kr.currentValue * kr.estimatedTime), 0)} / {okr.keyResults.reduce((sum: number, kr: any) => sum + (kr.estimatedTime * kr.targetValue), 0)} min
+                  </span>
+                </div>
                 <p className="mb-1">{okr.keyResults.length} résultats clés</p>
                 <p>Échéance: {new Date(okr.endDate).toLocaleDateString('fr-FR')}</p>
               </div>
