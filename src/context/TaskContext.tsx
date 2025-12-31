@@ -346,39 +346,100 @@ const defaultUser: User = {
   autoValidation: false,
 };
 
-const initialHabits: Habit[] = [
-  {
-    id: '1',
-    name: 'Lire 30 minutes',
-    estimatedTime: 30,
-    completions: {
-      '2025-12-25': true,
-      '2025-12-24': true,
-      '2025-12-23': true,
-      '2025-12-22': true,
-      '2025-12-21': true,
-      '2025-12-19': true,
-      '2025-12-18': true,
-    },
-    streak: 5,
-    color: 'blue',
-    createdAt: '2025-12-01T00:00:00.000Z',
-  },
-  {
-    id: '2',
-    name: 'Méditation',
-    estimatedTime: 15,
-    completions: {
-      '2025-12-25': true,
-      '2025-12-24': true,
-      '2025-12-22': true,
-      '2025-12-20': true,
-    },
-    streak: 2,
-    color: 'purple',
-    createdAt: '2025-12-01T00:00:00.000Z',
+const generatePastCompletions = (startDaysAgo: number, completionRate: number) => {
+  const completions: { [date: string]: boolean } = {};
+  const today = new Date();
+  for (let i = 0; i < startDaysAgo; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    if (Math.random() < completionRate) {
+      completions[`${year}-${month}-${day}`] = true;
+    }
   }
-];
+  return completions;
+};
+
+const calculateStreak = (completions: { [date: string]: boolean }) => {
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    if (completions[dateStr]) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+};
+
+const initialHabits: Habit[] = (() => {
+  const habits = [
+    {
+      id: '1',
+      name: 'Lire 30 minutes',
+      estimatedTime: 30,
+      completions: generatePastCompletions(90, 0.85),
+      streak: 0,
+      color: '#3B82F6',
+      createdAt: '2025-04-01T00:00:00.000Z',
+    },
+    {
+      id: '2',
+      name: 'Méditation',
+      estimatedTime: 15,
+      completions: generatePastCompletions(120, 0.7),
+      streak: 0,
+      color: '#8B5CF6',
+      createdAt: '2025-03-01T00:00:00.000Z',
+    },
+    {
+      id: '3',
+      name: 'Sport',
+      estimatedTime: 45,
+      completions: generatePastCompletions(180, 0.6),
+      streak: 0,
+      color: '#10B981',
+      createdAt: '2025-01-15T00:00:00.000Z',
+    },
+    {
+      id: '4',
+      name: 'Réviser vocabulaire',
+      estimatedTime: 20,
+      completions: generatePastCompletions(60, 0.9),
+      streak: 0,
+      color: '#F59E0B',
+      createdAt: '2025-05-01T00:00:00.000Z',
+    },
+    {
+      id: '5',
+      name: 'Écriture journal',
+      estimatedTime: 10,
+      completions: generatePastCompletions(200, 0.75),
+      streak: 0,
+      color: '#EC4899',
+      createdAt: '2024-12-01T00:00:00.000Z',
+    },
+    {
+      id: '6',
+      name: 'Étirements',
+      estimatedTime: 10,
+      completions: generatePastCompletions(150, 0.65),
+      streak: 0,
+      color: '#6366F1',
+      createdAt: '2025-02-10T00:00:00.000Z',
+    }
+  ];
+  return habits.map(h => ({ ...h, streak: calculateStreak(h.completions) }));
+})();
 
 const initialOKRs: OKR[] = [
   {
@@ -651,7 +712,7 @@ const initialEvents: CalendarEvent[] = [
           keyResults: okr.keyResults.map(kr => {
             if (kr.id === keyResultId) {
               const newHistory = [...(kr.history || [])];
-              if (updates.currentValue !== undefined && updates.currentValue > kr.currentValue) {
+                if (updates.currentValue !== undefined && updates.currentValue !== kr.currentValue) {
                 newHistory.push({
                   date: getLocalDateString(new Date()),
                   increment: updates.currentValue - kr.currentValue
