@@ -3,27 +3,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Clock, TrendingUp, Calendar, ChevronDown, Target, CheckSquare, Repeat, CalendarDays } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
+import { parseLocalDate, getLocalDateString, calculateWorkTimeForPeriod } from '../lib/workTimeCalculator';
 
 type StatSection = 'all' | 'tasks' | 'agenda' | 'okr' | 'habits';
 type TimePeriod = 'day' | 'week' | 'month' | 'year';
-
-// Helper for parsing date string as a local Date object
-const parseLocalDate = (dateStr: string) => {
-  if (!dateStr) return new Date();
-  if (dateStr.includes('T')) {
-    return new Date(dateStr);
-  }
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
-};
-
-// Helper for formatting date as "YYYY-MM-DD" in local time
-const getLocalDateString = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 export default function StatisticsPage() {
   const { tasks, events, colorSettings, okrs, habits } = useTasks();
@@ -36,7 +19,6 @@ export default function StatisticsPage() {
   const [chartWidth, setChartWidth] = useState(800);
   const [now, setNow] = useState(new Date());
 
-  // Update current time every minute to keep "today" reference fresh
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
@@ -56,17 +38,6 @@ export default function StatisticsPage() {
   }, []);
 
   const getPeriodDetails = (period: TimePeriod, periodDate: Date) => {
-    const details = {
-      completedTasks: [] as any[],
-      events: [] as any[],
-      habits: [] as any[],
-      totalTime: 0,
-      tasksTime: 0,
-      eventsTime: 0,
-      habitsTime: 0,
-      okrTime: 0
-    };
-
     let startDate: Date, endDate: Date;
 
     if (period === 'day') {
@@ -88,59 +59,19 @@ export default function StatisticsPage() {
       endDate = new Date(periodDate.getFullYear(), 11, 31);
       endDate.setHours(23, 59, 59, 999);
     } else {
-      return details;
+      return {
+        completedTasks: [],
+        events: [],
+        habits: [],
+        totalTime: 0,
+        tasksTime: 0,
+        eventsTime: 0,
+        habitsTime: 0,
+        okrTime: 0
+      };
     }
 
-    details.completedTasks = tasks.filter(task => {
-      if (!task.completed || !task.completedAt) return false;
-      const taskDate = parseLocalDate(task.completedAt);
-      return taskDate >= startDate && taskDate <= endDate;
-    });
-
-    details.events = events.filter(event => {
-      const eventDate = parseLocalDate(event.start);
-      return eventDate >= startDate && eventDate <= endDate;
-    });
-
-    details.habitsTime = habits.reduce((total, habit) => {
-      const completionsInPeriod = Object.keys(habit.completions).filter(date => {
-        const hDate = parseLocalDate(date);
-        const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
-        const startNormalized = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-        const endNormalized = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        return hDateNormalized >= startNormalized && hDateNormalized <= endNormalized && habit.completions[date];
-      }).length;
-      return total + (completionsInPeriod * habit.estimatedTime);
-    }, 0);
-
-    details.okrTime = 0;
-    okrs.forEach(okr => {
-      okr.keyResults.forEach(kr => {
-        const historyInPeriod = (kr.history || []).filter(h => {
-          const hDate = parseLocalDate(h.date);
-          const hDateNormalized = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
-          const startNormalized = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-          const endNormalized = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-          return hDateNormalized >= startNormalized && hDateNormalized <= endNormalized;
-        });
-        const totalIncrements = historyInPeriod.reduce((sum, h) => sum + h.increment, 0);
-        details.okrTime += totalIncrements * kr.estimatedTime;
-      });
-    });
-
-    details.tasksTime = details.completedTasks.reduce((sum, task) => sum + task.estimatedTime, 0);
-    
-    details.eventsTime = 0;
-    details.events.forEach(event => {
-      const start = new Date(event.start);
-      const end = new Date(event.end);
-      const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-      details.eventsTime += durationMinutes;
-    });
-
-    details.totalTime = details.tasksTime + details.eventsTime + details.habitsTime + details.okrTime;
-
-    return details;
+    return calculateWorkTimeForPeriod(startDate, endDate, { tasks, events, habits, okrs });
   };
 
     const calculateWorkTime = (period: TimePeriod) => {
@@ -351,12 +282,11 @@ export default function StatisticsPage() {
     };
 
     const sections = [
-
-    { id: 'all', label: 'Vue d\'ensemble', icon: BarChart3 },
-    { id: 'tasks', label: 'Tâches', icon: CheckSquare },
-    { id: 'agenda', label: 'Agenda', icon: CalendarDays },
-    { id: 'okr', label: 'OKR', icon: Target },
-    { id: 'habits', label: 'Habitudes', icon: Repeat }
+    { id: 'all', label: 'Vue d\'ensemble', icon: BarChart3, color: '#8B5CF6' },
+    { id: 'tasks', label: 'Tâches', icon: CheckSquare, color: '#3B82F6' },
+    { id: 'agenda', label: 'Agenda', icon: CalendarDays, color: '#F97316' },
+    { id: 'okr', label: 'OKR', icon: Target, color: '#22C55E' },
+    { id: 'habits', label: 'Habitudes', icon: Repeat, color: '#EAB308' }
   ];
 
   const periods = [
@@ -387,42 +317,51 @@ export default function StatisticsPage() {
         <p style={{ color: 'rgb(var(--color-text-secondary))' }}>Analysez votre productivité et vos performances</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { icon: Clock, label: "Aujourd'hui", val: globalStats.today, color: 'blue' },
-          { icon: Calendar, label: "Cette semaine", val: globalStats.week, color: 'emerald' },
-          { icon: BarChart3, label: "Ce mois", val: globalStats.month, color: 'orange' },
-          { icon: TrendingUp, label: "Cette année", val: globalStats.year, color: 'violet' }
-        ].map((s, idx) => (
-          <div key={idx} className="card p-5">
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl bg-${s.color}-500/10`}>
-                <s.icon size={22} className={`text-${s.color}-500`} />
-              </div>
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>{s.label}</p>
-                <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(s.val)}</p>
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: "Aujourd'hui", val: globalStats.today, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)' },
+            { label: "Cette semaine", val: globalStats.week, color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' },
+            { label: "Ce mois", val: globalStats.month, color: '#F97316', bg: 'rgba(249, 115, 22, 0.1)' },
+            { label: "Cette année", val: globalStats.year, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)' }
+          ].map((s, idx) => (
+            <div key={idx} className="card p-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl" style={{ backgroundColor: s.bg }}>
+                  <Calendar size={22} style={{ color: s.color }} />
+                </div>
+                <div>
+                  <p className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-muted))' }}>{s.label}</p>
+                  <p className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{formatTimeShort(s.val)}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
       <div className="mb-6 space-y-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Analyser :</span>
-          <div className="relative">
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value as StatSection)}
-              className="appearance-none rounded-lg pl-4 pr-10 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all border border-border bg-surface text-primary"
-              style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-text-primary))' }}
-            >
-              {sections.map(section => <option key={section.id} value={section.id}>{section.label}</option>)}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground"><ChevronDown size={16} /></div>
+<div className="flex flex-wrap items-center gap-4">
+            <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>Analyser :</span>
+            <div className="flex rounded-xl p-1 bg-hover" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
+              {sections.map(section => {
+                const Icon = section.icon;
+                const isSelected = selectedSection === section.id;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setSelectedSection(section.id as StatSection)}
+                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isSelected ? 'shadow-sm' : ''}`}
+                    style={{
+                      backgroundColor: isSelected ? 'rgb(var(--color-surface))' : 'transparent',
+                      color: isSelected ? section.color : 'rgb(var(--color-text-secondary))'
+                    }}
+                  >
+                    <Icon size={16} style={{ color: isSelected ? section.color : 'rgb(var(--color-text-secondary))' }} />
+                    <span className="hidden sm:inline">{section.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
         <div className="flex rounded-xl p-1 w-fit bg-hover" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
           {periods.map(period => (
@@ -452,12 +391,12 @@ export default function StatisticsPage() {
           
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={showReferenceBar} onChange={(e) => setShowReferenceBar(e.target.checked)} className="w-4 h-4 rounded" style={{ accentColor: '#8B5CF6' }} />
+              <input type="checkbox" checked={showReferenceBar} onChange={(e) => setShowReferenceBar(e.target.checked)} className="w-4 h-4 rounded" style={{ accentColor: '#3B82F6' }} />
               <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>Objectif</span>
             </label>
             {showReferenceBar && (
               <div className="flex items-center gap-2">
-                <input type="number" value={referenceValue} onChange={(e) => setReferenceValue(Number(e.target.value))} min="5" max="480" step="5" className="w-16 px-2 py-1.5 text-sm rounded-lg border border-border bg-hover text-primary" style={{ backgroundColor: 'rgb(var(--color-hover))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-text-primary))' }} />
+                <input type="number" value={referenceValue} onChange={(e) => setReferenceValue(Number(e.target.value))} step="5" className="w-20 px-2 py-1.5 text-sm rounded-lg border border-border bg-hover text-primary" style={{ backgroundColor: 'rgb(var(--color-hover))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-text-primary))' }} />
                 <span className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>min</span>
               </div>
             )}
@@ -467,7 +406,7 @@ export default function StatisticsPage() {
           <div ref={chartContainerRef} className="relative rounded-xl overflow-hidden bg-hover" style={{ height: `${chartHeight}px`, backgroundColor: 'rgb(var(--color-hover))' }}>
             <svg width="100%" height="100%" className="overflow-visible">
               <defs>
-                <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#6366F1" /></linearGradient>
+                <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#3B82F6" /><stop offset="100%" stopColor="#2563EB" /></linearGradient>
                 <linearGradient id="barGradientSuccess" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#059669" /></linearGradient>
                 <linearGradient id="barGradientWarning" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
               </defs>
@@ -482,8 +421,8 @@ export default function StatisticsPage() {
               })}
               {showReferenceBar && referenceValue <= yScale.max && (
                 <g>
-                  <line x1={paddingLeft} y1={getBarY(referenceValue)} x2={chartWidth - paddingRight} y2={getBarY(referenceValue)} stroke="#F59E0B" strokeWidth="2" strokeDasharray="8,4" />
-                  <rect x={chartWidth - paddingRight - 60} y={getBarY(referenceValue) - 10} width="55" height="20" rx="4" fill="#F59E0B" />
+                  <line x1={paddingLeft} y1={getBarY(referenceValue)} x2={chartWidth - paddingRight} y2={getBarY(referenceValue)} stroke="#3B82F6" strokeWidth="2" strokeDasharray="8,4" />
+                  <rect x={chartWidth - paddingRight - 60} y={getBarY(referenceValue) - 10} width="55" height="20" rx="4" fill="#3B82F6" />
                   <text x={chartWidth - paddingRight - 32} y={getBarY(referenceValue) + 4} textAnchor="middle" className="text-xs font-medium" fill="white">{formatTimeShort(referenceValue)}</text>
                 </g>
               )}
@@ -540,10 +479,10 @@ const OverviewStatistics: React.FC<{ workTimeData: any[], colorSettings: any }> 
   };
 
   const breakdown = [
-    { id: 'tasks', label: 'Tâches', time: totalDetails.tasksTime, color: '#8B5CF6', icon: CheckSquare },
-    { id: 'agenda', label: 'Agenda', time: totalDetails.eventsTime, color: '#3B82F6', icon: CalendarDays },
-    { id: 'habits', label: 'Habitudes', time: totalDetails.habitsTime, color: '#10B981', icon: Repeat },
-    { id: 'okr', label: 'OKR', time: totalDetails.okrTime, color: '#6366F1', icon: Target },
+    { id: 'tasks', label: 'Tâches', time: totalDetails.tasksTime, color: '#3B82F6', icon: CheckSquare },
+    { id: 'agenda', label: 'Agenda', time: totalDetails.eventsTime, color: '#F97316', icon: CalendarDays },
+    { id: 'habits', label: 'Habitudes', time: totalDetails.habitsTime, color: '#EAB308', icon: Repeat },
+    { id: 'okr', label: 'OKR', time: totalDetails.okrTime, color: '#22C55E', icon: Target },
   ].sort((a, b) => b.time - a.time);
 
   return (
