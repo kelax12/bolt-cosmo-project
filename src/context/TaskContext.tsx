@@ -458,7 +458,7 @@ const initialEvents: CalendarEvent[] = [
     const [lists, setLists] = useState<TaskList[]>(initialLists);
     const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
     const [categories, setCategories] = useState<Category[]>(initialCategories);
-    const [user, setUser] = useState<User | null>(defaultUser);
+    const [user, setUser] = useState<User | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
     const [habits, setHabits] = useState<Habit[]>(initialHabits);
@@ -633,7 +633,13 @@ const initialEvents: CalendarEvent[] = [
   const updateHabit = (id: string, updates: Partial<Habit>) => setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
   const deleteHabit = (id: string) => setHabits(prev => prev.filter(h => h.id !== id));
 
-  const addOKR = (okr: OKR) => setOkrs(prev => [...prev, okr]);
+  const addOKR = (okr: OKR) => {
+    const newOKR = {
+      ...okr,
+      startDate: okr.startDate || getLocalDateString(new Date())
+    };
+    setOkrs(prev => [...prev, newOKR]);
+  };
   const updateOKR = (id: string, updates: Partial<OKR>) => setOkrs(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
   const deleteOKR = (id: string) => setOkrs(prev => prev.filter(o => o.id !== id));
   
