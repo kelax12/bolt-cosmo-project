@@ -52,31 +52,36 @@ const TodayTasks: React.FC = () => {
         {todayTasks.map(task => {
           const categoryData = getCategoryData(task.category);
           return (
-            <div 
-              key={task.id}
-              onClick={() => navigate('/tasks', { state: { openTaskId: task.id } })}
-              className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-lg ${
-                task.isCollaborative ? 'collaborative-task' : ''
-              }`}
-              style={{
-                backgroundColor: !task.isCollaborative && categoryData ? `${categoryData.color}20` : undefined,
-                borderColor: !task.isCollaborative && categoryData ? `${categoryData.color}50` : undefined,
-              }}
+              <div 
+                key={task.id}
+                onClick={() => navigate('/tasks', { state: { openTaskId: task.id } })}
+                className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-lg ${
+                  task.isCollaborative ? 'collaborative-task' : ''
+                } ${task.priority <= 2 ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700' : ''}`}
+                style={{
+                  backgroundColor: task.priority > 2 && !task.isCollaborative && categoryData ? `${categoryData.color}20` : undefined,
+                  borderColor: task.priority > 2 && !task.isCollaborative && categoryData ? `${categoryData.color}50` : undefined,
+                }}
             >
               <div className="flex items-center gap-3">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleComplete(task.id);
-                  }}
-                  className={`h-6 w-6 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
-                    task.completed 
-                      ? 'bg-blue-600 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-600 shadow-md' 
-                      : 'bg-white border-slate-300 dark:bg-slate-800 dark:border-slate-600 text-transparent hover:border-blue-400'
-                  }`}
-                >
-                  <Check className="h-4 w-4" strokeWidth={3} />
-                </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleComplete(task.id);
+                    }}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                      task.completed 
+                        ? 'bg-green-500 border-green-500' 
+                        : 'border-gray-400 hover:border-green-500'
+                    }`}
+                    title={task.completed ? "Marquer comme non faite" : "Marquer comme faite"}
+                  >
+                    {task.completed && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
                 
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
