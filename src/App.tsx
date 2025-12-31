@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
@@ -15,6 +15,7 @@ import { TaskProvider, useTasks } from './context/TaskContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
+import { ThemeProvider } from 'next-themes';
 import HoverReceiver from "@/visual-edits/VisualEditsMessenger";
 
 function AppContent() {
@@ -48,14 +49,20 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TaskProvider>
-      <TooltipProvider>
-        <Toaster />
-        <HoverReceiver />
-        <AppContent />
-      </TooltipProvider>
-    </TaskProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TaskProvider>
+        <TooltipProvider>
+          <Toaster />
+          <HoverReceiver />
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </TooltipProvider>
+      </TaskProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
+
+export default App;
 
 export default App;
