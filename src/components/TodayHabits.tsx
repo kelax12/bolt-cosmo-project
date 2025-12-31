@@ -40,7 +40,7 @@ const TodayHabits: React.FC = () => {
           className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-lg ${
             habit.completedToday ?
             'bg-blue-100 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-900/40 hover:border-blue-400 dark:hover:border-blue-700' :
-            'bg-purple-100 dark:bg-gray-800/50 border-purple-300 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-600 hover:bg-purple-200 dark:hover:bg-purple-900/30'}`
+            'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-yellow-400 dark:hover:border-yellow-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`
             }
             onClick={(e) => {
               // Only toggle completion if clicking the circle icon area
