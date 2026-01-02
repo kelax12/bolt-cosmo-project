@@ -80,8 +80,12 @@ const CollaboratorModal: React.FC<CollaboratorModalProps> = ({ isOpen, onClose, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl transition-colors" style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 animate-modal-backdrop">
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl transition-colors opacity-0 scale-95 animate-modal-content" style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b transition-colors" style={{ borderColor: 'rgb(var(--color-border))' }}>
           <div className="flex items-center gap-3">
