@@ -265,11 +265,12 @@ const AgendaPage: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowTaskSidebar(!showTaskSidebar)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all shadow-sm col-span-1 lg:w-auto justify-center ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all shadow-sm col-span-1 lg:w-auto justify-center border ${
                   showTaskSidebar ? 'shadow-md' : ''
                 }`}
                 style={{
-                  backgroundColor: showTaskSidebar ? 'rgb(var(--color-accent))' : 'rgb(var(--color-hover))',
+                  backgroundColor: showTaskSidebar ? 'rgb(var(--color-accent))' : 'rgb(var(--color-chip-bg))',
+                  borderColor: showTaskSidebar ? 'rgb(var(--color-accent))' : 'rgb(var(--color-chip-border))',
                   color: showTaskSidebar ? 'white' : 'rgb(var(--color-text-primary))'
                 }}>
                 <Calendar size={18} />
