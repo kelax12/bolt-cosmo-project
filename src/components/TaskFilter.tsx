@@ -195,46 +195,46 @@ const TaskFilter: React.FC<TaskFilterProps> = ({
                   </label>
                   <div className="flex flex-wrap gap-2 sm:gap-3">
                     {categories.map((category) => (
-                      <motion.button
-                        key={category.id}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => toggleCategory(category.id)}
-                        className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                          selectedCategories.includes(category.id)
-                            ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-md border-2 border-slate-900 dark:border-slate-100'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'
-                        }`}
-                        aria-label={`${selectedCategories.includes(category.id) ? 'Retirer' : 'Ajouter'} le filtre ${category.name}`}
-                        aria-pressed={selectedCategories.includes(category.id)}
-                      >
-                        <div 
-                          className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                          aria-hidden="true"
-                        />
-                        <span>{category.name}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Priority Range */}
-                <div className="bg-slate-900/40 p-4 sm:p-5 rounded-2xl border border-slate-800/50">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                       Intervalle de priorité
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-bold">
-                        P{priorityRange[0]}
-                      </span>
-                      <span className="text-slate-600">à</span>
-                      <span className="px-3 py-1 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-bold">
-                        P{priorityRange[1]}
-                      </span>
+                        <motion.button
+                          key={category.id}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => toggleCategory(category.id)}
+                          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all border shadow-sm ${
+                            selectedCategories.includes(category.id)
+                              ? 'bg-blue-600 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-600 shadow-md'
+                              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700'
+                          }`}
+                          aria-label={`${selectedCategories.includes(category.id) ? 'Retirer' : 'Ajouter'} le filtre ${category.name}`}
+                          aria-pressed={selectedCategories.includes(category.id)}
+                        >
+                          <div 
+                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-sm"
+                            style={{ backgroundColor: category.color }}
+                            aria-hidden="true"
+                          />
+                          <span>{category.name}</span>
+                        </motion.button>
+                      ))}
                     </div>
                   </div>
+  
+                  {/* Priority Range */}
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                      <label className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                         Intervalle de priorité
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-lg bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                          P{priorityRange[0]}
+                        </span>
+                        <span className="text-slate-400 dark:text-slate-600">à</span>
+                        <span className="px-3 py-1 rounded-lg bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                          P{priorityRange[1]}
+                        </span>
+                      </div>
+                    </div>
 
 
                 <div className="px-4 py-2">
