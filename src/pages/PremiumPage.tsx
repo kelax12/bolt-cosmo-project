@@ -15,31 +15,31 @@ const PremiumPage: React.FC = () => {
   const premium = isPremium();
 
   const features = [
-    {
-      icon: Users,
-      title: 'Collaboration',
-      description: 'Partagez vos tâches avec votre équipe',
-      premium: true,
-    },
-    {
-      icon: MessageCircle,
-      title: 'Messagerie',
-      description: 'Communiquez directement avec vos collaborateurs',
-      premium: true,
-    },
-    {
-      icon: BarChart3,
-      title: 'Historique des interactions',
-      description: 'Suivez toutes vos collaborations',
-      premium: true,
-    },
-    {
-      icon: Star,
-      title: 'Fonctionnalités avancées',
-      description: 'Accès à toutes les fonctionnalités premium',
-      premium: true,
-    },
-  ];
+  {
+    icon: Users,
+    title: 'Collaboration',
+    description: 'Partagez vos tâches avec votre équipe',
+    premium: true
+  },
+  {
+    icon: MessageCircle,
+    title: 'Messagerie',
+    description: 'Communiquez directement avec vos collaborateurs',
+    premium: true
+  },
+  {
+    icon: BarChart3,
+    title: 'Historique des interactions',
+    description: 'Suivez toutes vos collaborations',
+    premium: true
+  },
+  {
+    icon: Star,
+    title: 'Fonctionnalités avancées',
+    description: 'Accès à toutes les fonctionnalités premium',
+    premium: true
+  }];
+
 
   const handleSubscribe = () => {
     setShowSubscription(false);
@@ -50,11 +50,11 @@ const PremiumPage: React.FC = () => {
     // Traitement après paiement réussi
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 1);
-    
+
     updateUserSettings({
       subscriptionEndDate: endDate.toISOString(),
       premiumWinStreak: user.premiumWinStreak + 1,
-      premiumTokens: user.premiumTokens + 30, // Bonus de jetons pour l'abonnement
+      premiumTokens: user.premiumTokens + 30 // Bonus de jetons pour l'abonnement
     });
   };
 
@@ -109,34 +109,34 @@ const PremiumPage: React.FC = () => {
           </div>
           
           <div className="text-right">
-            {premium ? (
-              <div className="text-lg px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold shadow-lg">
+            {premium ?
+            <div className="text-lg px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold shadow-lg">
                 ✨ PREMIUM ACTIF
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowSubscription(true)}
-                className="btn-primary text-lg px-8 py-4"
-              >
+              </div> :
+
+            <button
+              onClick={() => setShowSubscription(true)}
+              className="btn-primary text-lg px-8 py-4">
+
                 <Crown size={24} />
                 <span>Passer Premium</span>
               </button>
-            )}
+            }
           </div>
         </div>
       </div>
 
       {/* Gagner des jetons */}
       <div className="card p-6 mb-8">
-        <h3 className="text-xl font-bold mb-4" style={{ color: 'rgb(var(--color-text-primary))' }}>🎯 Gagner des jetons Premium</h3>
+        <h3 className="text-xl font-bold mb-4 !whitespace-pre-line" style={{ color: 'rgb(var(--color-text-primary))' }}> Gagner des jetons Premium</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-2xl border border-green-200 dark:border-green-700">
             <div className="flex items-center gap-3 mb-4">
               <Play size={24} className="text-green-600 dark:text-green-400" />
               <h4 className="font-bold text-green-800 dark:text-green-200">Regarder une publicité</h4>
             </div>
-            <p className="text-green-700 dark:text-green-300 mb-4">
-              Regardez une courte vidéo publicitaire pour gagner 1 jeton Premium instantanément.
+            <p className="text-green-700 dark:text-green-300 mb-4 !whitespace-pre-line">Regardez une courte vidéo publicitaire pour gagner 1 jeton Premium.
+
             </p>
             <div className="text-center mb-4">
               <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">+1</div>
@@ -144,8 +144,8 @@ const PremiumPage: React.FC = () => {
             </div>
             <button
               onClick={handleWatchAd}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
-            >
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-xl font-bold transition-colors flex items-center justify-center gap-2">
+
               <Play size={20} />
               <span>Regarder pub (+1 jeton)</span>
             </button>
@@ -156,8 +156,8 @@ const PremiumPage: React.FC = () => {
               <Crown size={24} className="text-blue-600 dark:text-blue-400" />
               <h4 className="font-bold text-blue-800 dark:text-blue-200">Abonnement mensuel</h4>
             </div>
-            <p className="text-blue-700 dark:text-blue-300 mb-4">
-              Souscrivez à l'abonnement Premium pour 30 jours de statut Premium garanti.
+            <p className="text-blue-700 dark:text-blue-300 mb-4 !whitespace-pre-line">Souscrivez à l'abonnement Premium pour 30 jours de statut Premium.
+
             </p>
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">3,50€</div>
@@ -165,8 +165,8 @@ const PremiumPage: React.FC = () => {
             </div>
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 mt-4"
-            >
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 mt-4">
+
               <Crown size={20} />
               <span>S'abonner maintenant</span>
             </button>
@@ -176,29 +176,29 @@ const PremiumPage: React.FC = () => {
 
       {/* Fonctionnalités Premium */}
       <div className="card p-6 mb-8">
-        <h3 className="text-xl font-bold mb-6" style={{ color: 'rgb(var(--color-text-primary))' }}>🚀 Fonctionnalités Premium</h3>
+        <h3 className="text-xl font-bold mb-6 !whitespace-pre-line" style={{ color: 'rgb(var(--color-text-primary))' }}> Fonctionnalités Premium</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {features.map((feature, index) => (
-            <div 
-              key={index}
-              className={`p-6 rounded-2xl border-2 transition-colors ${
-                premium 
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' 
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
-              style={{
-                backgroundColor: premium 
-                  ? undefined 
-                  : 'rgb(var(--color-hover))'
-              }}
-            >
+          {features.map((feature, index) =>
+          <div
+            key={index}
+            className={`p-6 rounded-2xl border-2 transition-colors ${
+            premium ?
+            'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' :
+            'border-gray-200 dark:border-gray-700'}`
+            }
+            style={{
+              backgroundColor: premium ?
+              undefined :
+              'rgb(var(--color-hover))'
+            }}>
+
               <div className="flex items-center gap-4 mb-3">
                 <div className={`p-3 rounded-xl transition-colors ${
-                  premium ? 'bg-green-100 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-700'
-                }`}>
+              premium ? 'bg-green-100 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-700'}`
+              }>
                   <feature.icon size={24} className={
-                    premium ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
-                  } />
+                premium ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
+                } />
                 </div>
                 <div>
                   <h4 className="font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>{feature.title}</h4>
@@ -206,13 +206,13 @@ const PremiumPage: React.FC = () => {
                 </div>
               </div>
               <p style={{ color: 'rgb(var(--color-text-secondary))' }}>{feature.description}</p>
-              {!premium && (
-                <div className="mt-3 text-sm text-orange-600 dark:text-orange-400 font-bold">
+              {!premium &&
+            <div className="mt-3 text-sm text-orange-600 dark:text-orange-400 font-bold">
                   🔒 Premium requis
                 </div>
-              )}
+            }
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -253,8 +253,8 @@ const PremiumPage: React.FC = () => {
       </div>
 
       {/* Modal d'abonnement */}
-      {showSubscription && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {showSubscription &&
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="rounded-xl shadow-2xl w-full max-w-md p-8 transition-colors" style={{ backgroundColor: 'rgb(var(--color-surface))' }}>
             <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: 'rgb(var(--color-text-primary))' }}>
               Abonnement Premium
@@ -286,37 +286,37 @@ const PremiumPage: React.FC = () => {
             
             <div className="flex gap-3">
               <button
-                onClick={() => setShowSubscription(false)}
-                className="flex-1 btn-secondary"
-              >
+              onClick={() => setShowSubscription(false)}
+              className="flex-1 btn-secondary">
+
                 Annuler
               </button>
               <button
-                onClick={handleSubscribe}
-                className="flex-1 btn-primary"
-              >
+              onClick={handleSubscribe}
+              className="flex-1 btn-primary">
+
                 S'abonner
               </button>
             </div>
           </div>
         </div>
-      )}
+      }
 
       {/* Modal de publicité */}
       <AdModal
         isOpen={showAdModal}
         onClose={() => setShowAdModal(false)}
-        onAdComplete={handleAdComplete}
-      />
+        onAdComplete={handleAdComplete} />
+
 
       {/* Modal de paiement */}
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
-    </div>
-  );
+        onPaymentSuccess={handlePaymentSuccess} />
+
+    </div>);
+
 };
 
 export default PremiumPage;
