@@ -498,7 +498,7 @@ const HabitTable: React.FC = () => {
           </div>
         </div>
         
-          <div className="p-4 bg-gray-900/50 rounded-xl">
+          <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgb(var(--color-surface-elevated))' }}>
             {(() => {
               const rows: typeof days[] = [];
               for (let i = days.length; i > 0; i -= 10) {
