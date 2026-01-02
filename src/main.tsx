@@ -1,10 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TaskProvider } from './context/TaskContext';
-import App from './App.tsx';
+import App from "./App.tsx";
 import './index.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
+
+const queryClient = new QueryClient();
 
 if (typeof window !== "undefined") {
   const sendToParent = (data: any) => {
@@ -16,7 +17,6 @@ if (typeof window !== "undefined") {
   };
 
   window.addEventListener("error", (event) => {
-    // Send structured payload to parent iframe
     sendToParent({
       type: "ERROR_CAPTURED",
       error: {
@@ -39,7 +39,6 @@ if (typeof window !== "undefined") {
         : String(reason);
     const stack = typeof reason === "object" ? reason?.stack : undefined;
 
-    // Mirror to parent iframe as well
     sendToParent({
       type: "ERROR_CAPTURED",
       error: {
@@ -55,16 +54,12 @@ if (typeof window !== "undefined") {
   });
 }
 
-const queryClient = new QueryClient();
-
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <TaskProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </TaskProvider>
+      <TooltipProvider>
+        <App />
+      </TooltipProvider>
     </QueryClientProvider>
   </StrictMode>
 );
