@@ -4,99 +4,166 @@
 
 @layer base {
   :root {
-    /* Light mode colors */
-    --color-primary: 71 85 105; /* #475569 - Slate 600 */
-    --color-secondary: 100 116 139; /* #64748B - Slate 500 */
-    --color-accent: 59 130 246; /* #3B82F6 - Blue 500 */
-    --color-success: 34 197 94; /* #22C55E - Green 500 */
-    --color-warning: 245 158 11; /* #F59E0B - Amber 500 */
-    --color-error: 239 68 68; /* #EF4444 - Red 500 */
-    --color-surface: 255 255 255; /* #FFFFFF */
-    --color-background: 248 250 252; /* #F8FAFC - Slate 50 */
+    /* Light mode colors (RGB format) */
+    --color-primary: 71 85 105;
+    --color-secondary: 100 116 139;
+    --color-accent: 37 99 235;
+    --color-success: 34 197 94;
+    --color-warning: 245 158 11;
+    --color-error: 239 68 68;
+    --color-surface: 255 255 255;
+    --color-background: 248 250 252;
     
     /* Semantic colors for better accessibility */
-    --color-text-primary: 15 23 42; /* #0F172A - Slate 900 */
-    --color-text-secondary: 71 85 105; /* #475569 - Slate 600 */
-    --color-text-muted: 148 163 184; /* #94A3B8 - Slate 400 */
-    --color-border: 226 232 240; /* #E2E8F0 - Slate 200 */
-    --color-border-muted: 241 245 249; /* #F1F5F9 - Slate 100 */
-    --color-hover: 248 250 252; /* #F8FAFC - Slate 50 */
-    --color-active: 241 245 249; /* #F1F5F9 - Slate 100 */
+    --color-text-primary: 15 23 42;
+    --color-text-secondary: 71 85 105;
+    --color-text-muted: 148 163 184;
+    --color-border: 226 232 240;
+    --color-border-muted: 241 245 249;
+      --color-hover: 241 245 249;
+      --color-active: 226 232 240;
+      --color-chip-bg: 241 245 249;
+      --color-chip-border: 203 213 225;
     
     /* Navigation specific colors */
-    --nav-bg: 255 255 255; /* White */
-    --nav-border: 226 232 240; /* #E2E8F0 - Slate 200 */
-    --nav-item-text: 100 116 139; /* #64748B - Slate 500 */
-    --nav-item-hover-bg: 248 250 252; /* #F8FAFC - Slate 50 */
-    --nav-item-hover-text: 15 23 42; /* #0F172A - Slate 900 */
-    --nav-item-active-bg: 15 23 42; /* #0F172A - Slate 900 */
-    --nav-item-active-text: 255 255 255; /* White */
+    --nav-bg: 255 255 255;
+    --nav-border: 226 232 240;
+    --nav-item-text: 100 116 139;
+    --nav-item-hover-bg: 248 250 252;
+    --nav-item-hover-text: 15 23 42;
+    --nav-item-active-bg: 15 23 42;
+    --nav-item-active-text: 255 255 255;
     
     /* Calendar specific colors */
-    --calendar-bg: 255 255 255; /* White */
-    --calendar-border: 226 232 240; /* #E2E8F0 - Slate 200 */
-    --calendar-header-bg: 248 250 252; /* #F8FAFC - Slate 50 */
-    --calendar-header-text: 71 85 105; /* #475569 - Slate 600 */
-    --calendar-day-bg: 255 255 255; /* White */
-    --calendar-day-hover: 248 250 252; /* #F8FAFC - Slate 50 */
-    --calendar-today-bg: 241 245 249; /* #F1F5F9 - Slate 100 */
+    --calendar-bg: 255 255 255;
+    --calendar-border: 226 232 240;
+    --calendar-header-bg: 248 250 252;
+    --calendar-header-text: 71 85 105;
+    --calendar-day-bg: 255 255 255;
+    --calendar-day-hover: 248 250 252;
+    --calendar-today-bg: 241 245 249;
     
     /* Table specific colors */
-    --table-bg: 255 255 255; /* White */
-    --table-border: 226 232 240; /* #E2E8F0 - Slate 200 */
-    --table-header-bg: 248 250 252; /* #F8FAFC - Slate 50 */
-    --table-header-text: 71 85 105; /* #475569 - Slate 600 */
-    --table-row-hover: 248 250 252; /* #F8FAFC - Slate 50 */
-    --table-row-even: 255 255 255; /* White */
-    --table-row-odd: 249 250 251; /* #F9FAFB - Gray 50 */
+    --table-bg: 255 255 255;
+    --table-border: 226 232 240;
+    --table-header-bg: 248 250 252;
+    --table-header-text: 71 85 105;
+    --table-row-hover: 248 250 252;
+    --table-row-even: 255 255 255;
+    --table-row-odd: 249 250 251;
+
+    /* shadcn/ui variables (HSL format) - Light mode */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 215 25% 35%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 20% 65%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+    
+    /* shadcn/ui sidebar variables - Light mode */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 16% 47%;
+    --sidebar-primary: 222 47% 11%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .dark {
-    /* Dark mode colors */
-    --color-primary: 148 163 184; /* #94A3B8 - Slate 400 */
-    --color-secondary: 100 116 139; /* #64748B - Slate 500 */
-    --color-accent: 96 165 250; /* #60A5FA - Blue 400 */
-    --color-success: 52 211 153; /* #34D399 - Green 400 */
-    --color-warning: 251 191 36; /* #FBBF24 - Amber 400 */
-    --color-error: 248 113 113; /* #F87171 - Red 400 */
-    --color-surface: 30 41 59; /* #1E293B - Slate 800 */
-    --color-background: 15 23 42; /* #0F172A - Slate 900 */
+    /* Dark mode colors (RGB format) */
+    --color-primary: 148 163 184;
+    --color-secondary: 100 116 139;
+    --color-accent: 59 130 246;
+    --color-success: 52 211 153;
+    --color-warning: 251 191 36;
+    --color-error: 248 113 113;
+    --color-surface: 30 41 59;
+    --color-background: 15 23 42;
     
     /* Semantic colors for dark mode */
-    --color-text-primary: 248 250 252; /* #F8FAFC - Slate 50 */
-    --color-text-secondary: 203 213 225; /* #CBD5E1 - Slate 300 */
-    --color-text-muted: 148 163 184; /* #94A3B8 - Slate 400 */
-    --color-border: 71 85 105; /* #475569 - Slate 600 */
-    --color-border-muted: 51 65 85; /* #334155 - Slate 700 */
-    --color-hover: 51 65 85; /* #334155 - Slate 700 */
-    --color-active: 71 85 105; /* #475569 - Slate 600 */
+    --color-text-primary: 248 250 252;
+    --color-text-secondary: 203 213 225;
+    --color-text-muted: 148 163 184;
+    --color-border: 51 65 85;
+    --color-border-muted: 51 65 85;
+      --color-hover: 51 65 85;
+      --color-active: 71 85 105;
+      --color-chip-bg: 51 65 85;
+      --color-chip-border: 71 85 105;
     
     /* Navigation specific colors for dark mode */
-    --nav-bg: 30 41 59; /* #1E293B - Slate 800 (Lighter than 334155) */
-    --nav-border: 51 65 85; /* #334155 - Slate 700 */
-    --nav-item-text: 148 163 184; /* #94A3B8 - Slate 400 */
-    --nav-item-hover-bg: 51 65 85; /* #334155 - Slate 700 */
-    --nav-item-hover-text: 203 213 225; /* #CBD5E1 - Slate 300 */
-    --nav-item-active-bg: 71 85 105; /* #475569 - Slate 600 */
-    --nav-item-active-text: 255 255 255; /* White */
+    --nav-bg: 30 41 59;
+    --nav-border: 51 65 85;
+    --nav-item-text: 148 163 184;
+    --nav-item-hover-bg: 51 65 85;
+    --nav-item-hover-text: 203 213 225;
+    --nav-item-active-bg: 71 85 105;
+    --nav-item-active-text: 255 255 255;
     
     /* Calendar specific colors for dark mode */
-    --calendar-bg: 30 41 59; /* #1E293B - Slate 800 */
-    --calendar-border: 71 85 105; /* #475569 - Slate 600 */
-    --calendar-header-bg: 15 23 42; /* #0F172A - Slate 900 */
-    --calendar-header-text: 203 213 225; /* #CBD5E1 - Slate 300 */
-    --calendar-day-bg: 15 23 42; /* #0F172A - Slate 900 */
-    --calendar-day-hover: 30 41 59; /* #1E293B - Slate 800 */
-    --calendar-today-bg: 51 65 85; /* #334155 - Slate 700 */
+    --calendar-bg: 30 41 59;
+    --calendar-border: 71 85 105;
+    --calendar-header-bg: 15 23 42;
+    --calendar-header-text: 203 213 225;
+    --calendar-day-bg: 15 23 42;
+    --calendar-day-hover: 30 41 59;
+    --calendar-today-bg: 51 65 85;
     
     /* Table specific colors for dark mode */
-    --table-bg: 30 41 59; /* #1E293B - Slate 800 */
-    --table-border: 71 85 105; /* #475569 - Slate 600 */
-    --table-header-bg: 15 23 42; /* #0F172A - Slate 900 */
-    --table-header-text: 203 213 225; /* #CBD5E1 - Slate 300 */
-    --table-row-hover: 51 65 85; /* #334155 - Slate 700 */
-    --table-row-even: 30 41 59; /* #1E293B - Slate 800 */
-    --table-row-odd: 15 23 42; /* #0F172A - Slate 900 */
+    --table-bg: 30 41 59;
+    --table-border: 71 85 105;
+    --table-header-bg: 15 23 42;
+    --table-header-text: 203 213 225;
+    --table-row-hover: 51 65 85;
+    --table-row-even: 30 41 59;
+    --table-row-odd: 15 23 42;
+
+    /* shadcn/ui variables (HSL format) - Dark mode */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 217 33% 17%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 215 20% 65%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 215 25% 35%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 27%;
+    --input: 217 33% 27%;
+    --ring: 217 91% 60%;
+    
+    /* shadcn/ui sidebar variables - Dark mode */
+    --sidebar-background: 217 33% 17%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 27%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 27%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   body {
@@ -166,6 +233,10 @@
     border-radius: 0.75rem;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .dark .card {
+    border-color: rgba(255, 255, 255, 0.05);
   }
 
   .card-elevated {
@@ -386,6 +457,24 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalContentShow {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropFadeIn 0.2s ease-out forwards;
+}
+
+.animate-modal-content {
+  animation: modalContentShow 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* FullCalendar Custom Styles */
