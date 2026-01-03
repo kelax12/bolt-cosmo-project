@@ -61,14 +61,14 @@ const DashboardChart: React.FC = () => {
 
   return (
     <motion.div 
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 lg:p-8 shadow-2xl"
+      className="relative overflow-hidden rounded-3xl bg-[rgb(var(--color-surface))] border border-[rgb(var(--color-border))] p-6 lg:p-8 shadow-lg dark:shadow-2xl"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 flex items-center justify-between mb-6">
@@ -80,10 +80,10 @@ const DashboardChart: React.FC = () => {
             <TrendingUp size={24} className="text-white" />
           </motion.div>
           <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
+            <h2 className="text-xl lg:text-2xl font-bold text-[rgb(var(--color-text-primary))] tracking-tight">
               Temps de travail
             </h2>
-            <p className="text-slate-400 text-sm flex items-center gap-2">
+            <p className="text-[rgb(var(--color-text-secondary))] text-sm flex items-center gap-2">
               <Calendar size={14} />
               7 derniers jours
             </p>
@@ -91,34 +91,34 @@ const DashboardChart: React.FC = () => {
         </div>
         
         <motion.div 
-          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20"
+          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-[rgb(var(--color-success)/0.1)] border border-[rgb(var(--color-success)/0.2)]"
           whileHover={{ scale: 1.02 }}
         >
-          <Flame size={16} className="text-blue-400" />
-          <span className="text-blue-400 text-sm font-medium">+12% cette semaine</span>
+          <Flame size={16} className="text-[rgb(var(--color-success))]" />
+          <span className="text-[rgb(var(--color-success))] text-sm font-medium">+12% cette semaine</span>
         </motion.div>
       </div>
-
+  
       <div className="relative z-10 mb-6">
         <div className="flex">
-          {/* Y-Axis Labels */}
-          <div className="flex flex-col justify-between pr-3 py-2" style={{ height: '200px' }}>
-            {[...yTicks].reverse().map((tick) => (
-              <span key={tick} className="text-[11px] font-medium text-slate-500 text-right leading-none">
-                {formatTimeShort(tick)}
-              </span>
-            ))}
-          </div>
-
-          {/* Chart Area */}
-          <div className="flex-1 relative" style={{ height: '200px' }}>
-            {/* Grid Lines */}
-            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-              {yTicks.map((tick) => (
-                <div key={tick} className="border-b border-slate-700/30 w-full" />
+            {/* Y-Axis Labels */}
+            <div className="flex flex-col justify-between pr-3 py-2" style={{ height: '200px' }}>
+              {[...yTicks].reverse().map((tick) => (
+                <span key={tick} className="text-[11px] font-medium text-[rgb(var(--color-text-muted))] text-right leading-none">
+                  {formatTimeShort(tick)}
+                </span>
               ))}
             </div>
-
+  
+            {/* Chart Area */}
+            <div className="flex-1 relative" style={{ height: '200px' }}>
+              {/* Grid Lines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                {yTicks.map((tick) => (
+                  <div key={tick} className="border-b border-[rgb(var(--color-border)/0.5)] w-full" />
+                ))}
+              </div>
+  
               {/* Bars Container */}
               <div className="absolute inset-0 flex items-end justify-around px-2">
                 {chartData.map((day, index) => {
@@ -126,7 +126,7 @@ const DashboardChart: React.FC = () => {
                   const barHeight = (day.time / yScaleMax) * chartHeight;
                   const isToday = index === chartData.length - 1;
                   const isHovered = hoveredBar === index;
-
+  
                   return (
                     <div
                       key={index}
@@ -145,25 +145,25 @@ const DashboardChart: React.FC = () => {
                             className="absolute z-20 flex flex-col items-center"
                             style={{ bottom: barHeight + 10 }}
                           >
-                            <div className="bg-white px-3 py-1.5 rounded-xl shadow-xl text-center">
-                              <div className="text-slate-900 font-bold text-xs whitespace-nowrap">
+                            <div className="bg-[rgb(var(--color-surface))] border border-[rgb(var(--color-border))] px-3 py-1.5 rounded-xl shadow-xl text-center">
+                              <div className="text-[rgb(var(--color-text-primary))] font-bold text-xs whitespace-nowrap">
                                 {formatTimeFull(day.time)}
                               </div>
-                              <div className="text-slate-500 text-[10px] whitespace-nowrap">
+                              <div className="text-[rgb(var(--color-text-secondary))] text-[10px] whitespace-nowrap">
                                 {day.fullDate}
                               </div>
                             </div>
-                            <div className="w-2 h-2 bg-white rotate-45 -mt-1 shadow-xl" />
+                            <div className="w-2 h-2 bg-[rgb(var(--color-surface))] border-r border-b border-[rgb(var(--color-border))] rotate-45 -mt-1 shadow-xl" />
                           </motion.div>
                         )}
                       </AnimatePresence>
-
+  
                       {/* Bar */}
                       <motion.div
                         className={`w-8 rounded-t-lg cursor-pointer ${
                           isToday 
-                            ? 'bg-gradient-to-t from-indigo-600 to-violet-400' 
-                            : 'bg-gradient-to-t from-blue-600 to-blue-400'
+                            ? 'bg-gradient-to-t from-[rgb(var(--color-accent))] to-[rgb(var(--color-accent)/0.6)]' 
+                            : 'bg-gradient-to-t from-[rgb(var(--color-accent)/0.8)] to-[rgb(var(--color-accent)/0.4)]'
                         }`}
                         style={{
                           opacity: hoveredBar === null || isHovered ? 1 : 0.4,
@@ -184,7 +184,7 @@ const DashboardChart: React.FC = () => {
               </div>
           </div>
         </div>
-
+  
         {/* X-Axis Labels */}
         <div className="flex mt-3">
           <div className="pr-3" style={{ width: '40px' }} />
@@ -193,67 +193,67 @@ const DashboardChart: React.FC = () => {
               const isToday = index === chartData.length - 1;
               const isHovered = hoveredBar === index;
               return (
-                <div 
-                  key={index} 
-                  className="text-center"
-                  style={{ width: `${100 / chartData.length}%` }}
-                >
-                  <span className={`text-[11px] font-bold uppercase tracking-wider transition-colors duration-200 ${
-                    isToday ? 'text-blue-400' : isHovered ? 'text-white' : 'text-slate-500'
-                  }`}>
-                    {day.date}
-                  </span>
-                </div>
+                  <div 
+                    key={index} 
+                    className="text-center"
+                    style={{ width: `${100 / chartData.length}%` }}
+                  >
+                    <span className={`text-[11px] font-bold uppercase tracking-wider transition-colors duration-200 ${
+                      isToday ? 'text-[rgb(var(--color-accent))]' : isHovered ? 'text-[rgb(var(--color-text-primary))]' : 'text-[rgb(var(--color-text-muted))]'
+                    }`}>
+                      {day.date}
+                    </span>
+                  </div>
               );
             })}
           </div>
         </div>
       </div>
-
-      {/* Stats grid */}
-      <div className="relative z-10 grid grid-cols-3 gap-4">
-        {[
-          { 
-            label: "Aujourd'hui", 
-            value: formatTimeFull(todayTime),
-            icon: Clock,
-            gradient: 'from-blue-500 to-indigo-500'
-          },
-          { 
-            label: 'Moyenne', 
-            value: formatTimeFull(Math.round(avgTime)),
-            icon: TrendingUp,
-            gradient: 'from-violet-500 to-purple-500'
-          },
-          { 
-            label: 'Total', 
-            value: `${Math.floor(totalTime / 60)}h`,
-            icon: Flame,
-            gradient: 'from-amber-500 to-orange-500'
-          }
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            className="relative group"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 + index * 0.1 }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/30 backdrop-blur-md hover:border-slate-600/50 transition-all duration-300 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`p-1.5 rounded-lg bg-gradient-to-br ${stat.gradient}`}>
-                  <stat.icon size={14} className="text-white" />
+  
+        {/* Stats grid */}
+        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+          {[
+            { 
+              label: "Aujourd'hui", 
+              value: formatTimeFull(todayTime),
+              icon: Clock,
+              color: 'text-[rgb(var(--color-accent))]',
+              iconBg: 'bg-[rgb(var(--color-accent)/0.1)]'
+            },
+            { 
+              label: 'Moyenne', 
+              value: formatTimeFull(Math.round(avgTime)),
+              icon: TrendingUp,
+              color: 'text-[rgb(var(--color-secondary))]',
+              iconBg: 'bg-[rgb(var(--color-secondary)/0.1)]'
+            },
+            { 
+              label: 'Total', 
+              value: `${Math.floor(totalTime / 60)}h`,
+              icon: Flame,
+              color: 'text-[rgb(var(--color-warning))]',
+              iconBg: 'bg-[rgb(var(--color-warning)/0.1)]'
+            }
+            ].map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                className="flex flex-col p-5 rounded-2xl bg-[rgb(var(--color-surface))] border border-[rgb(var(--color-border))] transition-all duration-300 hover:shadow-md"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + index * 0.1 }}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`p-2 rounded-xl ${stat.iconBg} ${stat.color}`}>
+                    <stat.icon size={18} />
+                  </div>
+                  <span className="text-[rgb(var(--color-text-secondary))] text-xs font-semibold uppercase tracking-wide">{stat.label}</span>
                 </div>
-                <span className="text-slate-400 text-xs font-medium">{stat.label}</span>
-              </div>
-              <div className={`text-lg lg:text-xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}>
-                {stat.value}
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+                <div className={`text-2xl lg:text-3xl font-bold text-[rgb(var(--color-text-primary))] tracking-tight`}>
+                  {stat.value}
+                </div>
+              </motion.div>
+            ))}
+        </div>
     </motion.div>
   );
 };
