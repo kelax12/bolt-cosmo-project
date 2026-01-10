@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2, Edit2, Check, LayoutGrid, Type, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,38 +18,35 @@ interface CategoryManagerProps {
   onDelete: (id: string) => void;
 }
 
-export const COLORS: { name: string; hex: string; fr: string }[] = [
-  { name: 'blue', hex: '#3b82f6', fr: 'Bleu' },
-  { name: 'green', hex: '#22c55e', fr: 'Vert' },
-  { name: 'red', hex: '#ef4444', fr: 'Rouge' },
-  { name: 'purple', hex: '#a855f7', fr: 'Violet' },
-  { name: 'orange', hex: '#f97316', fr: 'Orange' },
-  { name: 'yellow', hex: '#eab308', fr: 'Jaune' },
-  { name: 'pink', hex: '#ec4899', fr: 'Rose' },
-  { name: 'indigo', hex: '#6366f1', fr: 'Indigo' },
-  { name: 'cyan', hex: '#06b6d4', fr: 'Cyan' },
-  { name: 'emerald', hex: '#10b981', fr: 'Émeraude' },
-  { name: 'rose', hex: '#f43f5e', fr: 'Rose vif' },
-  { name: 'amber', hex: '#f59e0b', fr: 'Ambre' },
-  { name: 'slate', hex: '#64748b', fr: 'Ardoise' },
-  { name: 'teal', hex: '#14b8a6', fr: 'Sarcelle' },
+export const COLORS = [
+  { name: 'blue', hex: '#3b82f6' },
+  { name: 'red', hex: '#ef4444' },
+  { name: 'green', hex: '#10b981' },
+  { name: 'purple', hex: '#a855f7' },
+  { name: 'orange', hex: '#f59e0b' },
+  { name: 'pink', hex: '#ec4899' },
+  { name: 'indigo', hex: '#6366f1' },
+  { name: 'cyan', hex: '#06b6d4' },
 ];
 
-export const ICONS = [
-  '📂', '📁', '🏠', '💼', '🛒', '🎮', '🎵', '📚',
-  '💰', '🏋️', '🍔', '✈️', '🚗', '💊', '🎬', '📱',
-  '💡', '🎯', '⭐', '❤️', '🔥', '⚡', '🌟', '🎁',
-  '🎨', '🔧', '🧪', '🧬', '🚀', '🌈', '🍦', '🍕',
-  '🏀', '⚽', '🎸', '🎹', '💻', '🖥️', '🖋️', '📝',
-  '📍', '⏰', '🔒', '🔑', '💎', '💡', '🌱', '☀️'
-];
+export const ICONS = ['📂', '💼', '👤', '🏠', '❤️', '📚', '🚀', '🎯', '💡', '🎮', '🍎', '🏋️', '🧘', '🎨', '🎵', '🎬', '🛒', '✈️'];
 
-export const getColorHex = (colorName: string): string => {
+export const getColorHex = (colorName: string) => {
   return COLORS.find(c => c.name === colorName)?.hex || '#3b82f6';
 };
 
-export const getColorFr = (colorName: string): string => {
-  return COLORS.find(c => c.name === colorName)?.fr || colorName;
+export const getColorFr = (colorName: string) => {
+  const names: Record<string, string> = {
+    blue: 'Bleu',
+    red: 'Rouge',
+    green: 'Vert',
+    purple: 'Violet',
+    orange: 'Orange',
+    pink: 'Rose',
+    indigo: 'Indigo',
+    cyan: 'Cyan'
+  };
+  return names[colorName] || colorName;
 };
 
 const CategoryManager: React.FC<CategoryManagerProps> = ({
@@ -68,6 +65,21 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
     icon: '📂'
   });
 
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const lastCategoryCount = useRef(categories.length);
+
+  useEffect(() => {
+    if (categories.length > lastCategoryCount.current) {
+      setTimeout(() => {
+        listContainerRef.current?.scrollTo({
+          top: listContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 100);
+    }
+    lastCategoryCount.current = categories.length;
+  }, [categories.length]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
@@ -85,12 +97,12 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
     setFormData({ name: '', color: 'blue', icon: '📂' });
   };
 
-  const startEdit = (cat: Category) => {
-    setEditingId(cat.id);
+  const startEdit = (category: Category) => {
+    setEditingId(category.id);
     setFormData({
-      name: cat.name,
-      color: cat.color,
-      icon: cat.icon
+      name: category.name,
+      color: category.color,
+      icon: category.icon
     });
     setIsAdding(false);
   };
@@ -104,34 +116,43 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden border border-white/10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Header */}
-            <div className="flex justify-between items-center p-6 border-b dark:border-slate-800">
+            <div className="p-6 border-b dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 z-10">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-xl">
+                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
                   <LayoutGrid className="text-blue-500" size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">Catégories OKR</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gérez vos domaines d'objectifs</p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Gestion des catégories</h2>
+                  <p className="text-xs text-slate-400 font-medium">Organisez vos objectifs et tâches</p>
                 </div>
               </div>
-                <button 
-                  onClick={onClose}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-90 group"
-                >
-                  <X size={20} className="text-slate-500 group-hover:text-blue-600" />
-                </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {/* Content */}
+            <div ref={listContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
               <div className="p-6 space-y-6">
+
                 {/* Form Section */}
                 <AnimatePresence mode="wait">
                   {(isAdding || editingId) && (
@@ -142,30 +163,30 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden mb-6"
                     >
-                        <form onSubmit={handleSubmit} className="relative bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50 space-y-5">
-                            <button
-                              type="button"
-                              onClick={cancelEdit}
-                              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors z-10"
-                              title="Fermer"
+                      <form onSubmit={handleSubmit} className="relative bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50 space-y-5">
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors z-10"
+                          title="Fermer"
+                        >
+                          <X size={16} />
+                        </button>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest flex items-center">
+                            {editingId ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
+                          </h3>
+                          <div className="px-3 py-1 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2 mr-8">
+                            <div
+                              className="w-5 h-5 rounded-md flex items-center justify-center text-xs shadow-sm transition-transform"
+                              style={{
+                                backgroundColor: getColorHex(formData.color) + '30',
+                                color: getColorHex(formData.color),
+                                border: `1.5px solid ${getColorHex(formData.color)}60`
+                              }}
                             >
-                            <X size={16} />
-                          </button>
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest flex items-center">
-                              {editingId ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
-                            </h3>
-                            <div className="px-3 py-1 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2 mr-8">
-                                <div 
-                                  className="w-5 h-5 rounded-md flex items-center justify-center text-xs shadow-sm transition-transform"
-                                style={{ 
-                                  backgroundColor: getColorHex(formData.color) + '30',
-                                  color: getColorHex(formData.color),
-                                  border: `1.5px solid ${getColorHex(formData.color)}60`
-                                }}
-                              >
-                                {formData.icon}
-                              </div>
+                              {formData.icon}
+                            </div>
                             <span className="text-[10px] font-bold" style={{ color: getColorHex(formData.color) }}>
                               {formData.name || 'Nom'}
                             </span>
@@ -198,8 +219,8 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                                   type="button"
                                   onClick={() => setFormData({ ...formData, icon })}
                                   className={`aspect-square rounded-lg text-lg flex items-center justify-center transition-all ${
-                                    formData.icon === icon 
-                                      ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20 scale-105' 
+                                    formData.icon === icon
+                                      ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20 scale-105'
                                       : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                                   }`}
                                 >
@@ -221,8 +242,8 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                                   type="button"
                                   onClick={() => setFormData({ ...formData, color: color.name })}
                                   className={`aspect-square rounded-lg transition-all relative group flex items-center justify-center ${
-                                    formData.color === color.name 
-                                      ? 'ring-2 ring-blue-500 scale-105' 
+                                    formData.color === color.name
+                                      ? 'ring-2 ring-blue-500 scale-105'
                                       : 'opacity-80 hover:opacity-100'
                                   }`}
                                   style={{ backgroundColor: color.hex }}
@@ -280,27 +301,27 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
                       {categories.map((category) => (
-                          <motion.div
-                            layout
-                            key={category.id}
-                            className="group flex items-center justify-between p-4 bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 rounded-2xl transition-all hover:shadow-xl hover:shadow-slate-200/40 dark:hover:shadow-none"
-                            style={{ 
-                              background: `linear-gradient(135deg, ${getColorHex(category.color)}08 0%, transparent 100%)`,
-                              borderColor: getColorHex(category.color) + '20'
-                            }}
-                          >
+                        <motion.div
+                          layout
+                          key={category.id}
+                          className="group flex items-center justify-between p-4 bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 rounded-2xl transition-all hover:shadow-xl hover:shadow-slate-200/40 dark:hover:shadow-none"
+                          style={{
+                            background: `linear-gradient(135deg, ${getColorHex(category.color)}08 0%, transparent 100%)`,
+                            borderColor: getColorHex(category.color) + '20'
+                          }}
+                        >
                           <div className="flex items-center gap-4">
-                            <div 
-                                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-md transition-transform group-hover:scale-110 duration-300"
-                                style={{ 
-                                  backgroundColor: getColorHex(category.color) + '30',
-                                  color: getColorHex(category.color),
-                                  border: `1.5px solid ${getColorHex(category.color)}60`,
-                                  boxShadow: `0 4px 12px ${getColorHex(category.color)}20`
-                                }}
-                              >
-                                {category.icon}
-                              </div>
+                            <div
+                              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-md transition-transform group-hover:scale-110 duration-300"
+                              style={{
+                                backgroundColor: getColorHex(category.color) + '30',
+                                color: getColorHex(category.color),
+                                border: `1.5px solid ${getColorHex(category.color)}60`,
+                                boxShadow: `0 4px 12px ${getColorHex(category.color)}20`
+                              }}
+                            >
+                              {category.icon}
+                            </div>
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                 {category.name}
@@ -313,7 +334,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => startEdit(category)}
