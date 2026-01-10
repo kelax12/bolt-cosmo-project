@@ -237,65 +237,49 @@ const HabitTable: React.FC = () => {
   return (
     <>
       <div className="card overflow-hidden">
-      <div className="p-6 border-b transition-colors" style={{
+      <div className="p-4 md:p-6 border-b transition-colors" style={{
           backgroundColor: 'rgb(var(--color-hover))',
           borderColor: 'rgb(var(--color-border))'
         }}>
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h2 className="text-xl font-semibold" style={{ color: 'rgb(var(--color-text-primary))' }}>Tableau de suivi</h2>
-            <p className="mt-1" style={{ color: 'rgb(var(--color-text-secondary))' }}>Vue d'ensemble de toutes vos habitudes</p>
+            <h2 className="text-lg md:text-xl font-semibold" style={{ color: 'rgb(var(--color-text-primary))' }}>Tableau de suivi</h2>
+            <p className="text-xs md:text-sm mt-1" style={{ color: 'rgb(var(--color-text-secondary))' }}>Vue d'ensemble de toutes vos habitudes</p>
           </div>
           
             {/* Navigation */}
             {period !== 'all' &&
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
                 <button
                 onClick={() => navigatePeriod('prev')}
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: 'rgb(var(--color-text-secondary))' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'rgb(var(--color-accent))';
-                  e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
-                  e.currentTarget.style.backgroundColor = 'transparent';
+                className="p-1.5 md:p-2 rounded-lg transition-colors border md:border-0"
+                style={{ 
+                  color: 'rgb(var(--color-text-secondary))',
+                  borderColor: 'rgb(var(--color-border))'
                 }}>
 
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
                 </button>
-                <div className="text-sm font-medium min-w-[120px] text-center" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                <div className="text-xs md:text-sm font-medium min-w-[100px] md:min-w-[120px] text-center" style={{ color: 'rgb(var(--color-text-primary))' }}>
                   {getCurrentPeriodLabel()}
                 </div>
                 <button
                 onClick={() => navigatePeriod('next')}
                 disabled={!canNavigateNext()}
-                className="p-2 rounded-lg transition-colors"
+                className="p-1.5 md:p-2 rounded-lg transition-colors border md:border-0"
                 style={{
                   color: canNavigateNext() ? 'rgb(var(--color-text-secondary))' : 'rgb(var(--color-text-muted))',
-                  cursor: canNavigateNext() ? 'pointer' : 'not-allowed'
-                }}
-                onMouseEnter={(e) => {
-                  if (canNavigateNext()) {
-                    e.currentTarget.style.color = 'rgb(var(--color-accent))';
-                    e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (canNavigateNext()) {
-                    e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
+                  cursor: canNavigateNext() ? 'pointer' : 'not-allowed',
+                  borderColor: 'rgb(var(--color-border))'
                 }}>
 
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             }
 
             {/* Sélecteur de période */}
-            <div className="flex flex-wrap items-center rounded-lg p-1 shadow-sm border transition-colors" style={{
+            <div className="flex items-center rounded-lg p-1 shadow-sm border transition-colors w-full md:w-auto" style={{
               backgroundColor: 'rgb(var(--color-surface))',
               borderColor: 'rgb(var(--color-border))'
             }}>
@@ -308,24 +292,13 @@ const HabitTable: React.FC = () => {
                     setCurrentDate(new Date());
                   }
                 }}
-                className="px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="flex-1 md:flex-none px-2 md:px-3 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium transition-all"
                 style={{
                   backgroundColor: period === option.value ? '#2563EB' : 'transparent',
                   color: period === option.value ? 'white' : 'rgb(var(--color-text-secondary))',
                   boxShadow: period === option.value ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
                 }}
-                onMouseEnter={(e) => {
-                  if (period !== option.value) {
-                    e.currentTarget.style.color = 'rgb(var(--color-accent))';
-                    e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (period !== option.value) {
-                    e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}>
+              >
 
                   {option.label}
                 </button>
@@ -334,14 +307,14 @@ const HabitTable: React.FC = () => {
         </div>
       </div>
       
-      <div className="overflow-x-auto" ref={scrollContainerRef}>
-        <table className="w-full">
+      <div className="overflow-x-auto hide-scrollbar" ref={scrollContainerRef}>
+        <table className="w-full border-collapse">
           <thead className="border-b transition-colors" style={{
               backgroundColor: 'rgb(var(--table-header-bg))',
               borderColor: 'rgb(var(--table-border))'
             }}>
             <tr>
-                <th className="text-left p-4 font-semibold sticky left-0 z-10 min-w-[250px] border-r transition-colors" style={{
+                <th className="text-left p-3 md:p-4 font-semibold sticky left-0 z-20 min-w-[140px] md:min-w-[250px] border-r transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style={{
                     color: 'rgb(var(--table-header-text))',
                     backgroundColor: 'rgb(var(--table-header-bg))',
                     borderColor: 'rgb(var(--table-border))'
@@ -349,23 +322,24 @@ const HabitTable: React.FC = () => {
                   Habitude
                 </th>
                   {days.map((day) =>
-                  <th key={day.date} className="text-center p-2 font-medium min-w-[50px] transition-colors" style={{ color: 'rgb(var(--table-header-text))' }}>
-                    <div className="text-xs mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>{day.dayName}</div>
-                    <div className={`text-sm ${day.isToday ? 'font-bold text-blue-600 dark:text-blue-400' : ''}`} style={{
+                  <th key={day.date} className="text-center p-2 font-medium min-w-[40px] md:min-w-[50px] transition-colors" style={{ color: 'rgb(var(--table-header-text))' }}>
+                    <div className="text-[10px] md:text-xs mb-1" style={{ color: 'rgb(var(--color-text-muted))' }}>{day.dayName}</div>
+                    <div className={`text-xs md:text-sm ${day.isToday ? 'font-bold' : ''}`} style={{
                       color: day.isToday ? 'rgb(var(--color-accent))' : 'rgb(var(--table-header-text))'
                     }}>
                       {day.dayNumber}
                     </div>
-                    {(period === 'month' || period === '3months' || period === 'all') &&
-                      <div className="text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>{day.monthName}</div>
-                      }
-                    </th>
-                    )}
-                  <th className="text-center p-4 font-semibold min-w-[80px] transition-colors border-l" style={{ 
+                    {(period === 'month' || period === 'all') &&
+                      <div className="text-[9px] md:text-xs opacity-70" style={{ color: 'rgb(var(--color-text-muted))' }}>{day.monthName}</div>
+                    }
+                  </th>
+                  )}
+                  <th className="text-center p-3 md:p-4 font-semibold min-w-[60px] md:min-w-[80px] transition-colors border-l" style={{ 
                     color: 'rgb(var(--table-header-text))',
                     borderColor: 'rgb(var(--table-border))'
                   }}>
-                    Série
+                    <Flame size={16} className="mx-auto md:hidden" />
+                    <span className="hidden md:inline">Série</span>
                   </th>
               </tr>
             </thead>
@@ -374,23 +348,18 @@ const HabitTable: React.FC = () => {
               <tr key={habit.id} className="border-b transition-colors" style={{
                 borderColor: 'rgb(var(--table-border))',
                 backgroundColor: index % 2 === 0 ? 'rgb(var(--table-row-even))' : 'rgb(var(--table-row-odd))'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(var(--table-row-hover))'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'rgb(var(--table-row-even))' : 'rgb(var(--table-row-odd))'}>
+              }}>
 
-                  <td className="p-4 sticky left-0 bg-inherit z-10 border-r transition-colors" style={{ borderColor: 'rgb(var(--table-border))' }}>
-                    <div className="flex items-center gap-3">
+                  <td className="p-3 md:p-4 sticky left-0 bg-inherit z-10 border-r transition-colors shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style={{ borderColor: 'rgb(var(--table-border))' }}>
+                    <div className="flex items-center gap-2 md:gap-3">
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        className="w-2.5 h-2.5 md:w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: colorOptions.find((c) => c.value === habit.color)?.color }} />
 
                       <div className="min-w-0">
-                        <div className="font-medium truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>{habit.name}</div>
-                        <div className="text-sm flex items-center gap-2 mt-1" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                          <div className="flex items-center gap-1">
-                            <Clock size={12} />
-                            <span>{habit.estimatedTime} min</span>
-                          </div>
+                        <div className="font-medium truncate text-xs md:text-sm" style={{ color: 'rgb(var(--color-text-primary))' }}>{habit.name}</div>
+                        <div className="text-[10px] md:text-xs flex items-center gap-2 mt-0.5" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                          <span>{habit.estimatedTime} min</span>
                         </div>
                       </div>
                     </div>
@@ -401,52 +370,35 @@ const HabitTable: React.FC = () => {
                     const isBeforeCreation = createdDate ? day.date < createdDate : false;
 
                     return (
-                      <td key={day.date} className="p-2 text-center transition-colors">
+                      <td key={day.date} className="p-1 md:p-2 text-center transition-colors">
                             <button
                           onClick={() => handleDayClick(habit.id, day.date)}
                           disabled={day.isFuture || isBeforeCreation}
-                          className="w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center mx-auto"
+                          className="w-7 h-7 md:w-8 md:h-8 rounded-lg border-1.5 md:border-2 transition-all flex items-center justify-center mx-auto"
                           style={{
-                            backgroundColor: isCompleted ? '#2563EB' : day.isFuture || isBeforeCreation ? 'rgb(var(--color-hover) / 0.5)' : day.isToday ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+                            backgroundColor: isCompleted ? '#2563EB' : day.isFuture || isBeforeCreation ? 'transparent' : day.isToday ? 'rgba(37, 99, 235, 0.05)' : 'transparent',
                             borderColor: isCompleted ? '#2563EB' : day.isToday ? '#2563EB' : day.isFuture || isBeforeCreation ? 'transparent' : 'rgb(var(--color-border))',
-                            color: isCompleted ? 'white' : day.isFuture || isBeforeCreation ? 'rgb(var(--color-text-muted) / 0.3)' : 'rgb(var(--color-text-secondary))',
+                            color: isCompleted ? 'white' : day.isFuture || isBeforeCreation ? 'rgb(var(--color-text-muted) / 0.2)' : 'rgb(var(--color-text-secondary))',
                             cursor: day.isFuture || isBeforeCreation ? 'not-allowed' : 'pointer',
-                            opacity: isBeforeCreation ? 0.3 : 1,
-                            filter: isBeforeCreation ? 'grayscale(1)' : 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!day.isFuture && !isBeforeCreation && !isCompleted) {
-                              e.currentTarget.style.backgroundColor = 'rgb(var(--color-hover))';
-                              e.currentTarget.style.borderColor = '#2563EB';
-                              e.currentTarget.style.color = '#2563EB';
-                              e.currentTarget.style.transform = 'scale(1.05)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!day.isFuture && !isBeforeCreation && !isCompleted) {
-                              e.currentTarget.style.backgroundColor = day.isToday ? 'rgba(37, 99, 235, 0.1)' : 'transparent';
-                              e.currentTarget.style.borderColor = day.isToday ? '#2563EB' : 'rgb(var(--color-border))';
-                              e.currentTarget.style.color = 'rgb(var(--color-text-secondary))';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }
+                            opacity: isBeforeCreation ? 0.3 : 1
                           }}>
 
                               {isCompleted ?
                           <CheckCircle size={14} /> :
                           day.isFuture || isBeforeCreation ?
-                          <Circle size={14} className="opacity-10" /> :
+                          <Circle size={12} className="opacity-10" /> :
 
-                          <Circle size={14} />
+                          <Circle size={14} className="opacity-30 hover:opacity-100" />
                             }
                               </button>
                             </td>);
 
 
                     })}
-                    <td className="p-4 text-center transition-colors border-l" style={{ borderColor: 'rgb(var(--table-border))' }}>
+                    <td className="p-3 md:p-4 text-center transition-colors border-l" style={{ borderColor: 'rgb(var(--table-border))' }}>
                       <div className="flex items-center justify-center gap-1">
-                        <Flame size={16} className="text-orange-500" />
-                        <span className="font-semibold" style={{ color: 'rgb(var(--color-text-primary))' }}>{habit.streak}</span>
+                        <Flame size={14} className="text-orange-500 md:w-4 md:h-4" />
+                        <span className="font-semibold text-xs md:text-sm" style={{ color: 'rgb(var(--color-text-primary))' }}>{habit.streak}</span>
                       </div>
                     </td>
                 </tr>
@@ -456,39 +408,36 @@ const HabitTable: React.FC = () => {
           </div>
         </div>
 
-      <div className="card overflow-hidden mt-8">
+      <div className="card overflow-hidden mt-6 md:mt-8">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 p-4 border-b transition-colors" style={{
           backgroundColor: 'rgb(var(--color-hover))',
           borderColor: 'rgb(var(--color-border))'
         }}>
           <div>
-            <h3 className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>
-              Suivi Global de Réussite
+            <h3 className="text-base md:text-lg font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>
+              Suivi Global
             </h3>
-            <p className="text-sm mt-1" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+            <p className="text-[10px] md:text-sm mt-0.5" style={{ color: 'rgb(var(--color-text-secondary))' }}>
               {selectedHabitId === 'all' 
-                ? "Pourcentage moyen de complétion de toutes vos habitudes par jour"
-                : `Suivi de complétion pour l'habitude : ${habits.find(h => h.id === selectedHabitId)?.name}`
+                ? "Complétion moyenne par jour"
+                : `Suivi pour : ${habits.find(h => h.id === selectedHabitId)?.name}`
               }
             </p>
           </div>
           
           <div className="flex items-center gap-2">
-            <label htmlFor="habit-filter" className="text-sm font-medium whitespace-nowrap" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-              Filtrer par :
-            </label>
             <select
               id="habit-filter"
               value={selectedHabitId}
               onChange={(e) => setSelectedHabitId(e.target.value)}
-              className="px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="w-full md:w-auto px-3 py-1.5 rounded-lg border text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               style={{
                 backgroundColor: 'rgb(var(--color-surface))',
                 borderColor: 'rgb(var(--color-border))',
                 color: 'rgb(var(--color-text-primary))'
               }}
             >
-              <option value="all">Tout</option>
+              <option value="all">Toutes les habitudes</option>
               {habits.map((habit) => (
                 <option key={habit.id} value={habit.id}>
                   {habit.name}
@@ -498,59 +447,47 @@ const HabitTable: React.FC = () => {
           </div>
         </div>
         
-          <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgb(var(--color-surface-elevated))' }}>
+          <div className="p-4 rounded-xl overflow-x-auto hide-scrollbar" style={{ backgroundColor: 'rgb(var(--color-surface-elevated))' }}>
             {(() => {
+              const itemsPerRow = typeof window !== 'undefined' && window.innerWidth < 768 ? 7 : 10;
               const rows: typeof days[] = [];
-              for (let i = days.length; i > 0; i -= 10) {
-                const start = Math.max(0, i - 10);
+              for (let i = days.length; i > 0; i -= itemsPerRow) {
+                const start = Math.max(0, i - itemsPerRow);
                 rows.push(days.slice(start, i));
               }
               
-              const maxRowsPerPage = 10;
+              const maxRowsPerPage = 6;
               const totalPages = Math.ceil(rows.length / maxRowsPerPage);
               const currentPageRows = rows.slice(globalPage * maxRowsPerPage, (globalPage + 1) * maxRowsPerPage);
             
             return (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {currentPageRows.map((rowDays, rowIndex) => (
-                  <table key={rowIndex} className="w-full table-fixed">
-                    <thead>
-                      <tr>
-                        {rowDays.map((day) => (
-                          <th key={day.date} className="text-center p-1 font-medium" style={{ color: 'rgb(var(--table-header-text))' }}>
-                            <div className={`text-xs ${day.isToday ? 'font-bold' : ''}`} style={{
-                              color: day.isToday ? 'rgb(var(--color-accent))' : 'rgb(var(--color-text-muted))'
-                            }}>
-                              {String(day.dayNumber).padStart(2, '0')}/{String(new Date(day.date).getMonth() + 1).padStart(2, '0')}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        {rowDays.map((day) => {
-                          const percentage = getDailyPercentage(day.date);
-                          const color = getSuccessColor(percentage);
-                          return (
-                            <td key={day.date} className="p-1 text-center">
-                              <div
-                                className="w-10 h-10 rounded-lg mx-auto flex items-center justify-center transition-all hover:scale-110 cursor-default"
-                                style={{ 
-                                  backgroundColor: color,
-                                  opacity: day.isFuture ? 0.2 : 1,
-                                  border: day.isToday ? '3px solid #2563EB' : 'none'
-                                }}
-                                title={`${day.dayNumber}/${new Date(day.date).getMonth() + 1}: ${percentage}%`}
-                              >
-                                <span className="text-xs font-bold text-white">{percentage}%</span>
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div key={rowIndex} className="flex gap-2 md:gap-3 justify-center">
+                    {rowDays.map((day) => {
+                      const percentage = getDailyPercentage(day.date);
+                      const color = getSuccessColor(percentage);
+                      return (
+                        <div key={day.date} className="flex flex-col items-center gap-1.5">
+                          <div
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-all hover:scale-110 cursor-default shadow-sm border"
+                            style={{ 
+                              backgroundColor: color,
+                              opacity: day.isFuture ? 0.2 : 1,
+                              borderColor: day.isToday ? '#2563EB' : 'transparent',
+                              borderWidth: day.isToday ? '2px' : '0'
+                            }}
+                            title={`${day.dayNumber}/${new Date(day.date).getMonth() + 1}: ${percentage}%`}
+                          >
+                            <span className="text-[10px] md:text-xs font-bold text-white">{percentage}%</span>
+                          </div>
+                          <div className={`text-[9px] md:text-[10px] ${day.isToday ? 'font-bold text-blue-600' : 'text-slate-500'}`}>
+                            {day.dayNumber}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ))}
                 
                 {totalPages > 1 && (
@@ -558,21 +495,21 @@ const HabitTable: React.FC = () => {
                     <button
                       onClick={() => setGlobalPage(p => Math.max(0, p - 1))}
                       disabled={globalPage === 0}
-                      className="p-2 rounded-full transition-colors disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="p-1.5 rounded-full transition-colors disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800"
                       style={{ color: 'rgb(var(--color-text-secondary))' }}
                     >
-                      <ChevronLeft size={24} />
+                      <ChevronLeft size={20} />
                     </button>
-                    <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                      Page {globalPage + 1} / {totalPages}
+                    <span className="text-xs font-medium" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                      {globalPage + 1} / {totalPages}
                     </span>
                     <button
                       onClick={() => setGlobalPage(p => Math.min(totalPages - 1, p + 1))}
                       disabled={globalPage === totalPages - 1}
-                      className="p-2 rounded-full transition-colors disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="p-1.5 rounded-full transition-colors disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800"
                       style={{ color: 'rgb(var(--color-text-secondary))' }}
                     >
-                      <ChevronRight size={24} />
+                      <ChevronRight size={20} />
                     </button>
                   </div>
                 )}
@@ -584,6 +521,5 @@ const HabitTable: React.FC = () => {
     </>
   );
 };
-
 
 export default HabitTable;
