@@ -11,7 +11,10 @@ import StatisticsPage from './pages/StatisticsPage';
 import MessagingPage from './pages/MessagingPage';
 import PremiumPage from './pages/PremiumPage';
 import SettingsPage from './pages/SettingsPage';
+import ErrorReporter from './components/ErrorReporter';
 import { TaskProvider, useTasks } from './context/TaskContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import HoverReceiver from "@/visual-edits/VisualEditsMessenger";
 
@@ -43,13 +46,14 @@ function AppContent() {
 }
 
 const App = () => (
-  <TaskProvider>
+  <>
+    <ErrorReporter />
     <Toaster />
     <HoverReceiver />
     <BrowserRouter>
       <AppContent />
     </BrowserRouter>
-  </TaskProvider>
+  </>
 );
 
 export default App;
