@@ -14,9 +14,9 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '', showLabel = f
 
   const getThemeIcon = (currentTheme: Theme) => {
     if (currentTheme === 'dark') {
-      return <Moon size={20} className="text-blue-400" />;
+      return <Moon size={20} className="text-[rgb(var(--color-accent))]" />;
     }
-    return <Sun size={20} className="text-yellow-500" />;
+    return <Sun size={20} className="text-orange-500" />;
   };
 
   const getThemeLabel = (currentTheme: Theme) => {
@@ -26,14 +26,14 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '', showLabel = f
   return (
     <button
       onClick={toggleTheme}
-      className={`p-3.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${className}`}
+      className={`p-3.5 rounded-xl bg-[rgb(var(--color-surface))] border border-[rgb(var(--color-border))] hover:bg-[rgb(var(--color-hover))] transition-all duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent))] ${className}`}
       aria-label={`Changer le thème (actuellement ${getThemeLabel(theme)})`}
       title={`Changer le thème (actuellement ${getThemeLabel(theme)})`}
     >
       <div className="flex items-center gap-2">
         {getThemeIcon(theme)}
         {showLabel && (
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-sm font-semibold text-[rgb(var(--color-text-primary))]">
             {getThemeLabel(theme)}
           </span>
         )}
