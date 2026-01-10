@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckSquare, Clock, Bookmark, AlertCircle, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckSquare, Clock, Bookmark, AlertCircle } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,31 +34,43 @@ const TodayTasks: React.FC = () => {
     return null;
   };
 
-      return (
-        <div className="p-6 bg-[rgb(var(--color-surface))] border border-[rgb(var(--color-border))] rounded-2xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-[rgb(var(--color-accent)/0.1)] rounded-xl">
-              <CheckSquare size={24} className="text-[rgb(var(--color-accent))]" />
+    const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+
+        return (
+          <div className="p-6 bg-[rgb(var(--color-surface))] border border-[rgb(var(--color-border))] rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-[rgb(var(--color-accent)/0.15)] rounded-xl">
+                <CheckSquare size={24} className="text-[rgb(var(--color-accent))]" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-[rgb(var(--color-text-primary))]">Tâches prioritaires</h2>
+                <p className="text-[rgb(var(--color-text-secondary))] text-sm">
+                  {todayTasks.length} tâches • {Math.floor(totalTime / 60)}h{totalTime % 60}min
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-[rgb(var(--color-text-primary))]">Tâches prioritaires</h2>
-              <p className="text-[rgb(var(--color-text-secondary))] text-sm">
-                {todayTasks.length} tâches • {Math.floor(totalTime / 60)}h{totalTime % 60}min
-              </p>
-            </div>
-          </div>
-  
-        <div className="space-y-3">
-          {todayTasks.map(task => {
-            const categoryData = getCategoryData(task.category);
-            return (
-                <div 
-                  key={task.id}
-                  onClick={() => navigate('/tasks', { state: { openTaskId: task.id } })}
-                    className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-sm ${
-                      task.isCollaborative ? 'collaborative-task' : ''
-                    } ${task.priority <= 2 ? 'bg-[rgb(var(--color-error)/0.25)] dark:bg-[rgb(var(--color-error)/0.15)] border-[rgb(var(--color-error)/0.5)] dark:border-[rgb(var(--color-error)/0.4)]' : 'bg-[rgb(var(--color-hover))] border-[rgb(var(--color-border))] hover:border-gray-300 dark:hover:border-white/10'}`}
-              >
+    
+          <div className="space-y-3">
+              {todayTasks.map(task => {
+                const categoryData = getCategoryData(task.category);
+                const cardColor = categoryData?.color || '#3B82F6';
+                const isHovered = hoveredTaskId === task.id;
+                
+                return (
+                    <div 
+                      key={task.id}
+                      onClick={() => navigate('/tasks', { state: { openTaskId: task.id } })}
+                      onMouseEnter={() => setHoveredTaskId(task.id)}
+                      onMouseLeave={() => setHoveredTaskId(null)}
+                      className={`p-4 rounded-xl border transition-all duration-300 cursor-pointer hover:shadow-md ${
+                        task.isCollaborative ? 'collaborative-task' : ''
+                      } ${task.priority <= 2 ? 'bg-[rgb(var(--color-error)/0.35)] dark:bg-[rgb(var(--color-error)/0.45)] border-[rgb(var(--color-error)/0.6)] dark:border-[rgb(var(--color-error)/0.8)]' : 'border-[rgb(var(--color-border))]'}`}
+                      style={!task.completed && task.priority > 2 ? {
+                        backgroundColor: isHovered ? `${cardColor}40` : `${cardColor}25`,
+                        borderColor: isHovered ? `${cardColor}70` : (task.isCollaborative ? `${cardColor}50` : undefined)
+                      } : {}}
+                  >
+
                     <div className="flex items-center gap-3">
                       <button
                         onClick={(e) => {
