@@ -24,9 +24,20 @@ const TasksSummary: React.FC<TasksSummaryProps> = ({
 
   const totalTasks = activeTasks.length;
 
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <>
-      <div className="card p-6 relative">
+      <div 
+        className="card p-6 relative transition-all duration-300"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{
+          borderColor: isHovered ? 'rgb(var(--color-accent))' : 'rgb(var(--color-border))',
+          boxShadow: isHovered ? '0 4px 12px rgba(0,0,0,0.1)' : '0 1px 2px rgba(0,0,0,0.05)',
+          backgroundColor: isHovered ? 'rgb(var(--color-surface)/0.95)' : 'rgb(var(--color-surface))'
+        }}
+      >
         <div className="absolute top-[5px] right-[5px] flex items-center gap-1">
           {onTogglePosition && (
             <button
