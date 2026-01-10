@@ -82,18 +82,23 @@
     --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 60%;
-  }
+--sidebar-ring: 217 91% 60%;
+--chart-1: 12 76% 61%;
+--chart-2: 173 58% 39%;
+--chart-3: 197 37% 24%;
+--chart-4: 43 74% 66%;
+--chart-5: 27 87% 67%;
+}
 
-  .dark {
-    /* Dark mode colors (RGB format) */
-    --color-primary: 148 163 184;
-    --color-secondary: 100 116 139;
-    --color-accent: 59 130 246;
-    --color-success: 52 211 153;
-    --color-warning: 251 191 36;
-    --color-error: 248 113 113;
-    --color-surface: 30 41 59;
+    .dark {
+        /* Dark mode colors (RGB format) */
+        --color-primary: 148 163 184;
+        --color-secondary: 100 116 139;
+        --color-accent: 59 130 246;
+        --color-success: 52 211 153;
+        --color-warning: 251 191 36;
+        --color-error: 239 68 68;
+        --color-surface: 30 41 59;
     --color-background: 15 23 42;
     
     /* Semantic colors for dark mode */
@@ -163,10 +168,15 @@
     --sidebar-accent: 217 33% 27%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 27%;
-    --sidebar-ring: 217 91% 60%;
-  }
+--sidebar-ring: 217 91% 60%;
+--chart-1: 220 70% 50%;
+--chart-2: 160 60% 45%;
+--chart-3: 30 80% 55%;
+--chart-4: 280 65% 60%;
+--chart-5: 340 75% 55%;
+}
 
-  body {
+body {
     background-color: rgb(var(--color-background));
     color: rgb(var(--color-text-primary));
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -220,12 +230,18 @@
   [data-slot="input"]:focus,
   [data-slot="textarea"]:focus,
   [data-slot="select-trigger"]:focus,
-  [data-state="open"][data-slot="select-trigger"] {
-    @apply border-2 border-blue-600 outline-none !ring-0 !ring-offset-0 !important;
-  }
-}
+    [data-state="open"][data-slot="select-trigger"] {
+      @apply border-2 border-blue-600 outline-none !ring-0 !ring-offset-0 !important;
+    }
 
-@layer components {
+    /* Hide native time picker icon */
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      display: none;
+      -webkit-appearance: none;
+    }
+  }
+  
+  @layer components {
   /* Design moderne et sobre */
   .card {
     background-color: rgb(var(--color-surface));
@@ -295,7 +311,7 @@
   }
 
   .dark .task-priority-1 {
-    @apply bg-red-900/20 text-red-300 border-red-800;
+    @apply bg-red-600/30 text-red-400 border-red-700;
   }
 
   .task-priority-2 {
@@ -303,7 +319,7 @@
   }
 
   .dark .task-priority-2 {
-    @apply bg-orange-900/20 text-orange-300 border-orange-800;
+    @apply bg-orange-600/30 text-orange-400 border-orange-700;
   }
 
   .task-priority-3 {
@@ -457,6 +473,16 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes modalBackdropFadeIn {
@@ -615,6 +641,24 @@
   background: #64748b;
 }
 
+/* Custom Blue Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
 /* Dark mode pour les groupes et containers */
 .dark .group, .dark .container {
   @apply bg-slate-900;
@@ -625,6 +669,32 @@
   @apply bg-amber-50 border-l-4 border-amber-400;
 }
 
-.dark .conversation-pinned {
-  @apply bg-amber-900/20 border-amber-400;
+  .dark .conversation-pinned {
+    @apply bg-amber-900/20 border-amber-400;
+  }
+
+/* Fix for FullCalendar Drag & Drop Mirror */
+.fc-event-dragging, 
+.fc-draggable-handle,
+.external-event {
+  touch-action: none !important;
+}
+
+/* Ensure the drag mirror follows the mouse precisely without parent transform interference */
+.fc-mirror-skeleton,
+body > .fc-event {
+  pointer-events: none !important;
+  z-index: 999999 !important;
+}
+
+/* Remove transitions during drag to prevent lag/offset */
+.fc-event-dragging {
+  transition: none !important;
+  transform: none !important;
+  opacity: 0.8 !important;
+}
+
+/* Force the external events mirror to be high z-index and follow correctly */
+.fc-event.fc-event-dragging.fc-event-dot {
+  display: none !important; /* Hide the dot if it appears as mirror */
 }
