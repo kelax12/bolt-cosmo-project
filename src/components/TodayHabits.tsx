@@ -34,14 +34,14 @@ const TodayHabits: React.FC = () => {
     </div>
 
     <div className="space-y-4">
-      {todayHabits.map((habit) =>
-      <div
-        key={habit.id}
-          className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-lg ${
-            habit.completedToday ?
-            'bg-blue-700 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800' :
-            'bg-[rgb(var(--color-hover))] dark:bg-gray-800/50 border-[rgb(var(--color-border))] dark:border-gray-700 hover:border-blue-400 dark:hover:border-yellow-500 hover:bg-slate-100 dark:hover:bg-gray-800'}`
-            }
+        {todayHabits.map((habit) =>
+        <div
+          key={habit.id}
+            className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-lg ${
+              habit.completedToday ?
+              'bg-blue-600 dark:bg-blue-900 border-blue-400 dark:border-blue-700 shadow-md' :
+              'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-slate-700/50'}`
+              }
             onClick={(e) => {
               if ((e.target as HTMLElement).closest('.completion-toggle')) {
                 toggleHabitCompletion(habit.id, today);
