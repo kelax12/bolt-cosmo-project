@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,7 @@ type ColorSettingsModalProps = {
 const ColorSettingsModal: React.FC<ColorSettingsModalProps> = ({ isOpen, onClose }) => {
   const { categories, updateCategory, addCategory, deleteCategory } = useTasks();
   const [localCategories, setLocalCategories] = useState(categories);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
 
@@ -22,6 +23,16 @@ const ColorSettingsModal: React.FC<ColorSettingsModalProps> = ({ isOpen, onClose
       color: '#3B82F6'
     };
     setLocalCategories([...localCategories, newCat]);
+    
+    // Auto-scroll to the newly created category
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
   };
 
   const handleUpdateLocal = (id: string, updates: Partial<{ name: string; color: string }>) => {
@@ -69,7 +80,7 @@ const ColorSettingsModal: React.FC<ColorSettingsModalProps> = ({ isOpen, onClose
         <motion.div 
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="relative w-full max-w-md overflow-hidden rounded-[20px] bg-white dark:bg-[#0F172A] text-slate-800 dark:text-white shadow-2xl border border-slate-200 dark:border-slate-800"
+          className="relative w-full max-w-md overflow-hidden rounded-[20px] bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-2xl border border-slate-200 dark:border-slate-700"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/50">
@@ -82,12 +93,15 @@ const ColorSettingsModal: React.FC<ColorSettingsModalProps> = ({ isOpen, onClose
             </button>
           </div>
 
-          <div className="px-6 py-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+          <div 
+            ref={scrollRef}
+            className="px-6 py-6 overflow-y-auto max-h-[60vh] custom-scrollbar scroll-smooth"
+          >
             {/* Add Button */}
             <div className="flex justify-end mb-4">
               <button 
                 onClick={handleAddCategory}
-                className="text-slate-600 dark:text-white hover:text-blue-600 transition-colors"
+                className="text-blue-600 hover:text-blue-700 transition-colors p-2 bg-blue-50 dark:bg-blue-900/20 rounded-full shadow-sm"
               >
                 <Plus size={24} strokeWidth={3} />
               </button>
@@ -97,27 +111,27 @@ const ColorSettingsModal: React.FC<ColorSettingsModalProps> = ({ isOpen, onClose
             <div className="space-y-4">
               <AnimatePresence mode="popLayout">
                 {localCategories.map((category) => (
-                  <motion.div
-                    key={category.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="flex items-center gap-3"
-                  >
-                    {/* Color Picker Box */}
-                    <div className="relative group">
-                      <div 
-                        className="h-10 w-10 rounded-lg flex-shrink-0 cursor-pointer shadow-sm hover:brightness-110 transition-all"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <input
-                        type="color"
-                        value={category.color}
-                        onChange={(e) => handleUpdateLocal(category.id, { color: e.target.value })}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                      />
-                    </div>
+                    <motion.div
+                      key={category.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="flex items-center gap-3"
+                    >
+                      {/* Color Picker Box */}
+                      <div className="relative group bg-white dark:bg-slate-800 rounded-[15px]">
+                        <div 
+                          className="h-10 w-10 rounded-[15px] flex-shrink-0 cursor-pointer shadow-sm hover:brightness-110 transition-all"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <input
+                            type="color"
+                            value={category.color}
+                            onChange={(e) => handleUpdateLocal(category.id, { color: e.target.value })}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full rounded-[15px] bg-transparent"
+                          />
+                      </div>
                     
                     {/* Name Input */}
                     <div className="flex-1">
