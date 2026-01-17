@@ -77,14 +77,14 @@ const TasksSummary: React.FC<TasksSummaryProps> = ({
         
         <h2 className="text-xl font-bold mb-4 pr-16" style={{ color: 'rgb(var(--color-text-primary))' }}>Taches en cour : {totalTasks}</h2>
         
-        <div className="space-y-3">
+        <div className={`grid ${isBottomPosition ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'} gap-x-6 gap-y-3 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar`}>
           {categories.map((category) => (
-            <div key={category.id} className="flex items-center gap-2">
+            <div key={category.id} className="flex items-center gap-2 shrink-0">
               <div 
                 className="w-4 h-4 rounded" 
                 style={{ backgroundColor: category.color }}
               ></div>
-              <span className="text-sm font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
+              <span className="text-sm font-medium truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>
                 {category.name}
               </span>
               <span className="ml-auto text-sm font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>
