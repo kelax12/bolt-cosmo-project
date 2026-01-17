@@ -456,38 +456,45 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
     useEffect(() => {
-      const savedTasks = localStorage.getItem('tasks');
-      const savedLists = localStorage.getItem('taskLists');
-      const savedEvents = localStorage.getItem('events');
-      const savedCategories = localStorage.getItem('categories');
-      const savedUser = localStorage.getItem('user');
-      const savedHabits = localStorage.getItem('habits');
-      const savedOKRs = localStorage.getItem('okrs');
-      const savedOKRCategories = localStorage.getItem('okrCategories');
-      const savedFavoriteColors = localStorage.getItem('favoriteColors');
-      
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
-      if (savedLists) setLists(JSON.parse(savedLists));
-      if (savedEvents) setEvents(JSON.parse(savedEvents));
-      if (savedCategories) setCategories(JSON.parse(savedCategories));
-      if (savedUser) setUser(JSON.parse(savedUser));
-      if (savedHabits) setHabits(JSON.parse(savedHabits));
-      
-      if (savedOKRs) {
-        let parsedOKRs = JSON.parse(savedOKRs);
-          // Force update for demo OKRs to ensure they reflect the new initial state
-          parsedOKRs = parsedOKRs.map((o: any) => {
-            const demoOKR = initialOKRs.find(demo => demo.id === o.id);
-            if (demoOKR && ['1', '2', '3', '4'].includes(o.id)) {
-              return demoOKR;
-            }
-            return o;
-          });
-        setOkrs(parsedOKRs);
+      try {
+        const savedTasks = localStorage.getItem('tasks');
+        const savedLists = localStorage.getItem('taskLists');
+        const savedEvents = localStorage.getItem('events');
+        const savedCategories = localStorage.getItem('categories');
+        const savedUser = localStorage.getItem('user');
+        const savedHabits = localStorage.getItem('habits');
+        const savedOKRs = localStorage.getItem('okrs');
+        const savedOKRCategories = localStorage.getItem('okrCategories');
+        const savedFavoriteColors = localStorage.getItem('favoriteColors');
+        
+        if (savedTasks) setTasks(JSON.parse(savedTasks));
+        if (savedLists) setLists(JSON.parse(savedLists));
+        if (savedEvents) setEvents(JSON.parse(savedEvents));
+        if (savedCategories) setCategories(JSON.parse(savedCategories));
+        if (savedUser) setUser(JSON.parse(savedUser));
+        if (savedHabits) setHabits(JSON.parse(savedHabits));
+        
+        if (savedOKRs) {
+          let parsedOKRs = JSON.parse(savedOKRs);
+          if (Array.isArray(parsedOKRs)) {
+            // Force update for demo OKRs to ensure they reflect the new initial state
+            parsedOKRs = parsedOKRs.map((o: any) => {
+              const demoOKR = initialOKRs.find(demo => demo.id === o.id);
+              if (demoOKR && ['1', '2', '3', '4'].includes(o.id)) {
+                return demoOKR;
+              }
+              return o;
+            });
+            setOkrs(parsedOKRs);
+          }
+        }
+        
+        if (savedOKRCategories) setOkrCategories(JSON.parse(savedOKRCategories));
+        if (savedFavoriteColors) setFavoriteColors(JSON.parse(savedFavoriteColors));
+      } catch (error) {
+        console.error("Error loading data from localStorage:", error);
+        // Fallback to initial state if parsing fails
       }
-      
-      if (savedOKRCategories) setOkrCategories(JSON.parse(savedOKRCategories));
-      if (savedFavoriteColors) setFavoriteColors(JSON.parse(savedFavoriteColors));
     }, []);
 
   useEffect(() => {
