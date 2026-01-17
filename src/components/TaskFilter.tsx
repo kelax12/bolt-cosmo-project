@@ -189,35 +189,35 @@ const TaskFilter: React.FC<TaskFilterProps> = ({
               }}
             >
                 {/* Categories Filter */}
-                <div>
-                  <label className="block text-sm font-semibold mb-3" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-                     Filtrer par catégories
-                  </label>
-                  <div className="flex flex-wrap gap-2 sm:gap-3">
-                    {categories.map((category) => (
-                        <motion.button
-                          key={category.id}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => toggleCategory(category.id)}
-                          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all border shadow-sm ${
-                            selectedCategories.includes(category.id)
-                              ? 'bg-blue-600 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-600 shadow-md'
-                              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700'
-                          }`}
-                          aria-label={`${selectedCategories.includes(category.id) ? 'Retirer' : 'Ajouter'} le filtre ${category.name}`}
-                          aria-pressed={selectedCategories.includes(category.id)}
-                        >
-                          <div 
-                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-sm"
-                            style={{ backgroundColor: category.color }}
-                            aria-hidden="true"
-                          />
-                          <span>{category.name}</span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-3" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                         Filtrer par catégories
+                      </label>
+                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
+                        {categories.map((category) => (
+                            <motion.button
+                              key={category.id}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => toggleCategory(category.id)}
+                              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all border shadow-sm shrink-0 ${
+                                selectedCategories.includes(category.id)
+                                  ? 'bg-blue-600 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-600 shadow-md'
+                                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700'
+                              }`}
+                              aria-label={`${selectedCategories.includes(category.id) ? 'Retirer' : 'Ajouter'} le filtre ${category.name}`}
+                              aria-pressed={selectedCategories.includes(category.id)}
+                            >
+                              <div 
+                                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-sm"
+                                style={{ backgroundColor: category.color }}
+                                aria-hidden="true"
+                              />
+                              <span className="truncate">{category.name}</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
   
                   {/* Priority Range */}
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
