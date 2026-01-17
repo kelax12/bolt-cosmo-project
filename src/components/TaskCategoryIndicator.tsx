@@ -20,3 +20,4 @@ const TaskCategoryIndicator: React.FC<TaskCategoryProps> = ({ category }) => {
 };
 
 export default TaskCategoryIndicator;
+
