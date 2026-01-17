@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import { useTasks, Task } from '../context/TaskContext';
 import { Search, Clock, Bookmark, Filter, X, CheckCircle2 } from 'lucide-react';
 import TaskModal from './TaskModal';
-
-interface TaskSidebarProps {
-  onClose?: () => void;
-  onDragStart?: () => void;
-}
+import CollaboratorAvatars from './CollaboratorAvatars';
 
 const TaskSidebar: React.FC<TaskSidebarProps> = ({ onClose, onDragStart }) => {
-  const { tasks, colorSettings, categories, events, priorityRange } = useTasks();
+  const { tasks, colorSettings, categories, events, priorityRange, friends } = useTasks();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
@@ -156,21 +153,27 @@ const TaskSidebar: React.FC<TaskSidebarProps> = ({ onClose, onDragStart }) => {
                   </div>
                 )}
                 
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: getCategoryColor(task.category) }}
-                    />
-                    <span className={`font-medium text-sm ${isPlaced ? 'line-through' : ''}`} style={{ color: 'rgb(var(--color-text-primary))' }}>{task.name}</span>
-                      {task.bookmarked && (
-                        <Bookmark size={14} className="favorite-icon filled" />
+                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getCategoryColor(task.category) }}
+                      />
+                      <span className={`font-medium text-sm ${isPlaced ? 'line-through' : ''}`} style={{ color: 'rgb(var(--color-text-primary))' }}>{task.name}</span>
+                        {task.bookmarked && (
+                          <Bookmark size={14} className="favorite-icon filled" />
+                        )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                        P{task.priority}
+                      </span>
+                      {task.isCollaborative && task.collaborators && (
+                        <CollaboratorAvatars collaborators={task.collaborators} friends={friends} size="sm" />
                       )}
+                    </div>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                    P{task.priority}
-                  </span>
-                </div>
+
                 
                 <div className="flex items-center justify-between text-xs" style={{ color: 'rgb(var(--color-text-muted))' }}>
                   <div className="flex items-center gap-1">
