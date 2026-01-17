@@ -9,11 +9,11 @@ interface HabitFormProps {
 
 const HabitForm: React.FC<HabitFormProps> = ({ onClose }) => {
   const { addHabit, favoriteColors, categories } = useTasks();
-  const [formData, setFormData] = useState({
-    name: '',
-    estimatedTime: 30,
-    color: favoriteColors[0] || '#3B82F6'
-  });
+    const [formData, setFormData] = useState({
+      name: '',
+      estimatedTime: 30,
+      color: categories[0]?.color || favoriteColors[0] || '#3B82F6'
+    });
   const [isColorSettingsOpen, setIsColorSettingsOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -103,50 +103,54 @@ const HabitForm: React.FC<HabitFormProps> = ({ onClose }) => {
         </div>
 
           <div>
-            <label className="flex justify-between items-center text-sm font-medium mb-2 md:mb-3" style={{ color: 'rgb(var(--color-text-secondary))' }}>
-              <span>Couleur</span>
-              <Plus 
-                className="w-4 h-4 text-blue-500 cursor-pointer hover:scale-125 transition-transform" 
-                onClick={() => setIsColorSettingsOpen(true)}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2 md:gap-3">
-              {favoriteColors.map((favColor, index) => (
+              <label className="text-sm font-medium mb-2 md:mb-3 block" style={{ color: 'rgb(var(--color-text-secondary))' }}>
+                <span>Couleur</span>
+              </label>
+              <div className="flex flex-wrap gap-2 md:gap-3 relative">
+                {favoriteColors.map((favColor, index) => (
+                  <button
+                    key={`${favColor}-${index}`}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color: favColor })}
+                    className={`w-8 h-8 md:w-10 md:h-10 rounded-lg border-2 transition-all hover:scale-105 ${
+                      formData.color === favColor ? 'scale-110 shadow-lg border-slate-900 dark:border-white' : ''
+                    }`}
+                    style={{
+                      backgroundColor: favColor,
+                      borderColor: formData.color === favColor ? undefined : 'rgb(var(--color-border))'
+                    }}
+                  />
+                ))}
                 <button
-                  key={`${favColor}-${index}`}
                   type="button"
-                  onClick={() => setFormData({ ...formData, color: favColor })}
-                  className={`w-8 h-8 md:w-10 md:h-10 rounded-lg border-2 transition-all hover:scale-105 ${
-                    formData.color === favColor ? 'scale-110 shadow-lg border-slate-900 dark:border-white' : ''
-                  }`}
-                  style={{
-                    backgroundColor: favColor,
-                    borderColor: formData.color === favColor ? undefined : 'rgb(var(--color-border))'
-                  }}
-                />
-              ))}
-            </div>
-            
-            {categories.length > 0 && (
-              <div
-                className="mt-4 p-2.5 rounded-xl border bg-opacity-30 transition-colors"
-                style={{ borderColor: 'rgb(var(--color-border))' }}
-              >
-                <h4 className="text-[10px] md:text-[12px] font-bold uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-text-muted))' }}>
-                  Légende
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5">
-                  {categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full shadow-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                      <span className="text-[11px] md:text-[13px] font-medium truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>
-                        {cat.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                  onClick={() => setIsColorSettingsOpen(true)}
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-lg border-2 border-dashed flex items-center justify-center transition-all hover:scale-105 hover:border-blue-500"
+                  style={{ borderColor: 'rgb(var(--color-border))' }}
+                >
+                  <Plus className="w-4 h-4 text-blue-500" />
+                </button>
               </div>
-            )}
+            
+              {categories.length > 0 && (
+                <div
+                  className="mt-4 p-2.5 rounded-xl border bg-opacity-30 transition-colors overflow-hidden"
+                  style={{ borderColor: 'rgb(var(--color-border))' }}
+                >
+                  <h4 className="text-[10px] md:text-[12px] font-bold uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--color-text-muted))' }}>
+                    Légende
+                  </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5 max-h-[100px] overflow-y-auto pr-1 custom-scrollbar">
+                      {categories.map((cat) => (
+                        <div key={cat.id} className="flex items-center gap-1.5 shrink-0">
+                          <div className="w-2 h-2 rounded-full shadow-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                          <span className="text-[11px] md:text-[13px] font-medium truncate" style={{ color: 'rgb(var(--color-text-primary))' }}>
+                            {cat.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                </div>
+              )}
           </div>
 
 
