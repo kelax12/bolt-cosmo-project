@@ -143,7 +143,9 @@ setShowTaskSidebar(false);
   };
 
   const handleEventClick = (clickInfo: any) => {
-    const event = events.find((e) => e.id === clickInfo.event.id);
+    const eventId = clickInfo.event.id;
+    const taskId = clickInfo.event.extendedProps?.taskId;
+    const event = events.find((e) => e.id === eventId || (taskId && e.taskId === taskId));
     if (event) {
       setSelectedEvent(event);
       setShowEditEventModal(true);
@@ -152,10 +154,14 @@ setShowTaskSidebar(false);
 
   const handleEventDrop = (dropInfo: any) => {
     const eventId = dropInfo.event.id;
+    const taskId = dropInfo.event.extendedProps?.taskId;
+    const event = events.find((e) => e.id === eventId || (taskId && e.taskId === taskId));
+    if (!event) return;
+    
     const newStart = dropInfo.event.start.toISOString();
     const newEnd = dropInfo.event.end ? dropInfo.event.end.toISOString() : new Date(dropInfo.event.start.getTime() + 60 * 60 * 1000).toISOString();
 
-    updateEvent(eventId, {
+    updateEvent(event.id, {
       start: newStart,
       end: newEnd
     });
@@ -163,6 +169,7 @@ setShowTaskSidebar(false);
 
   const handleEventReceive = (receiveInfo: any) => {
     const eventData = receiveInfo.event;
+    const newEventId = `event_${Date.now()}`;
     const newEvent = {
       title: eventData.title,
       start: eventData.start?.toISOString(),
@@ -174,14 +181,19 @@ setShowTaskSidebar(false);
       taskId: eventData.extendedProps.taskId
     };
 
-    receiveInfo.event.remove();
-
     const isDuplicate = events.some((e) =>
       newEvent.taskId && e.taskId === newEvent.taskId ||
       e.title === newEvent.title && e.start === newEvent.start && e.end === newEvent.end
     );
-    if (isDuplicate) return;
+    
+    if (isDuplicate) {
+      receiveInfo.event.remove();
+      return;
+    }
 
+    receiveInfo.event.setProp('id', newEventId);
+    receiveInfo.event.setExtendedProp('notes', newEvent.notes);
+    
     addEvent(newEvent);
   };
 
@@ -317,7 +329,7 @@ setShowTaskSidebar(false);
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowAddEventModal(true)}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/25 transform transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 col-span-1 lg:w-auto whitespace-nowrap"
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white shadow-lg shadow-blue-500/25 monochrome:shadow-white/10 transform transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 monochrome:from-white monochrome:to-neutral-200 monochrome:text-black monochrome:hover:from-neutral-100 monochrome:hover:to-neutral-300 col-span-1 lg:w-auto whitespace-nowrap"
                 >
                   <Plus size={18} />
                   <span className="font-medium text-sm lg:text-base">Nouveau</span>
