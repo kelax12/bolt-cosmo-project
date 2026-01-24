@@ -463,7 +463,7 @@ const HabitTable: React.FC = () => {
             return (
               <div className="space-y-4">
                 {currentPageRows.map((rowDays, rowIndex) => (
-                  <div key={rowIndex} className="flex gap-2 md:gap-3 justify-center">
+                  <div key={rowIndex} className="flex justify-between w-full px-2">
                     {rowDays.map((day) => {
                       const percentage = getDailyPercentage(day.date);
                       const color = getSuccessColor(percentage);
@@ -523,3 +523,4 @@ const HabitTable: React.FC = () => {
 };
 
 export default HabitTable;
+
