@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Users, AlertCircle, CheckCircle, Bookmark, Trash2, Search, UserPlus, Mail, List, ChevronDown, Plus } from 'lucide-react';
+import { X, Users, AlertCircle, CheckCircle, Bookmark, BookmarkCheck, Trash2, Search, UserPlus, Mail, List, ChevronDown, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, useTasks } from '@/context/TaskContext';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -27,7 +27,7 @@ interface TaskModalProps {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, isCreating = false, showCollaborators = false, initialData }) => {
-  const { updateTask, deleteTask, colorSettings, categories, friends, isPremium, shareTask, lists, addTaskToList, removeTaskFromList } = useTasks();
+  const { updateTask, deleteTask, colorSettings, categories, friends, isPremium, shareTask, sendFriendRequest, lists, addTaskToList, removeTaskFromList } = useTasks();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -46,6 +46,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
 
   // Collaborator state (integrated from AddTaskForm)
   const [collaborators, setCollaborators] = useState<string[]>([]);
+  const [pendingInvitesLocal, setPendingInvitesLocal] = useState<string[]>([]);
   const [searchUser, setSearchUser] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [showCollaboratorSection, setShowCollaboratorSection] = useState(showCollaborators);
@@ -101,8 +102,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
         setOkrFields({});
       }
 
-      setCollaborators([]);
-      setSelectedListIds([]);
+        setCollaborators([]);
+        setPendingInvitesLocal([]);
+        setSelectedListIds([]);
       setHasChanges(false);
       setErrors({});
       setShowCollaboratorSection(showCollaborators);
@@ -130,8 +132,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
       }
 
       setCollaborators(task.collaborators || []);
-      
-      const taskLists = lists.filter(l => l.taskIds.includes(task.id)).map(l => l.id);
+        setPendingInvitesLocal(task.pendingInvites || []);
+        
+        const taskLists = lists.filter(l => l.taskIds.includes(task.id)).map(l => l.id);
       setSelectedListIds(taskLists);
 
       setHasChanges(false);
@@ -229,7 +232,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
   };
 
   const handleSave = async () => {
-    if (!validateForm() || !task) return;
+    if (!validateForm()) return;
+    if (!isCreating && !task) return;
 
     setIsLoading(true);
 
@@ -238,14 +242,15 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
 
       const taskData = {
         ...formData,
-        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : (isCreating ? new Date().toISOString() : task.deadline),
+        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : (isCreating ? new Date().toISOString() : task!.deadline),
         isCollaborative: collaborators.length > 0,
         collaborators: collaborators,
+        pendingInvites: pendingInvitesLocal,
       };
 
       if (isCreating && onSave) {
         onSave(taskData);
-      } else {
+      } else if (task) {
         updateTask(task.id, taskData);
         
         // Sync lists
@@ -321,33 +326,87 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
   );
 
   const displayInfo = (id: string) => {
-    const friend = friends?.find((f) => f.id === id);
+    const friend = friends?.find((f) => f.id === id || f.name === id);
     if (friend) {
-      return { name: friend.name, email: friend.email, avatar: friend.avatar };
+      return { name: friend.name, email: friend.email, avatar: friend.avatar, isPending: false };
     }
+    const isPending = pendingInvitesLocal.includes(id);
     if (emailRegex.test(id)) {
-      return { name: id.split('@')[0], email: id, avatar: undefined };
+      return { name: id, email: id, avatar: undefined, isPending };
     }
-    return { name: id, email: undefined, avatar: undefined };
+    return { name: id, email: undefined, avatar: undefined, isPending };
   };
 
   const handleAddEmail = () => {
-    const value = emailInput.trim();
+    const value = emailInput.trim().toLowerCase();
     if (!value) return;
-    if (collaborators.includes(value)) {
-      setEmailInput('');
-      return;
+    
+    const friend = friends.find(f => f.email.toLowerCase() === value);
+    
+    if (friend) {
+      if (!collaborators.includes(friend.name)) {
+        setCollaborators([...collaborators, friend.name]);
+      }
+    } else {
+      if (collaborators.includes(value)) {
+        setEmailInput('');
+        return;
+      }
+      sendFriendRequest(value);
+      setCollaborators([...collaborators, value]);
+      setPendingInvitesLocal([...pendingInvitesLocal, value]);
+      if (task) {
+        updateTask(task.id, {
+          isCollaborative: true,
+          pendingInvites: [...pendingInvitesLocal, value],
+          collaboratorValidations: {
+            ...task.collaboratorValidations,
+            [value]: false
+          }
+        });
+      }
     }
-    setCollaborators([...collaborators, value]);
     setEmailInput('');
   };
 
-  const toggleCollaborator = (userId: string) => {
-    setCollaborators((prev) =>
-      prev.includes(userId) ?
-      prev.filter((id) => id !== userId) :
-      [...prev, userId]
-    );
+  const handleRemoveCollaborator = (collaboratorName: string) => {
+    const newCollaborators = collaborators.filter((c) => c !== collaboratorName);
+    setCollaborators(newCollaborators);
+    const newPendingInvites = pendingInvitesLocal.filter(e => e !== collaboratorName);
+    setPendingInvitesLocal(newPendingInvites);
+    
+    if (task) {
+      const newValidations = { ...task.collaboratorValidations };
+      delete newValidations[collaboratorName];
+      
+      updateTask(task.id, {
+        collaborators: newCollaborators,
+        isCollaborative: newCollaborators.length > 0,
+        collaboratorValidations: newValidations,
+        pendingInvites: newPendingInvites
+      });
+    }
+  };
+
+  const toggleCollaborator = (friendId: string) => {
+    const friend = friends.find(f => f.id === friendId);
+    const name = friend?.name || friendId;
+    
+    if (collaborators.includes(name)) {
+      handleRemoveCollaborator(name);
+    } else {
+      setCollaborators((prev) => [...prev, name]);
+      if (task) {
+        updateTask(task.id, {
+          isCollaborative: true,
+          collaborators: [...collaborators, name],
+          collaboratorValidations: {
+            ...task.collaboratorValidations,
+            [name]: false
+          }
+        });
+      }
+    }
   };
 
   return (
@@ -441,30 +500,33 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
                         <label htmlFor="task-priority" className="block text-sm font-semibold mb-2" style={{ color: 'rgb(var(--color-text-secondary))' }}>
                           Priorité
                         </label>
-                        <select
-                          id="task-priority"
-                          value={formData.priority}
-                          onChange={(e) => handleInputChange('priority', Number(e.target.value))}
-                          className="w-full px-4 h-12 border rounded-lg focus:outline-none hover:border-blue-500 focus:border-blue-600 focus:border-2 transition-all text-base border-slate-200 dark:border-slate-700"
-                          style={{
-                            backgroundColor: 'rgb(var(--color-surface))',
-                            color: formData.priority === 0 ? 'rgb(var(--color-text-muted))' : 'rgb(var(--color-text-primary))',
-                          }}
-                          aria-label="Sélectionner la priorité de la tâche"
-                        >
-                        <option value="0" disabled hidden>Choisir une priorité</option>
-                        <option value="1" style={{ color: 'rgb(var(--color-text-primary))' }}>1 (Très haute)</option>
-                        <option value="2" style={{ color: 'rgb(var(--color-text-primary))' }}>2 (Haute)</option>
-                        <option value="3" style={{ color: 'rgb(var(--color-text-primary))' }}>3 (Moyenne)</option>
-                        <option value="4" style={{ color: 'rgb(var(--color-text-primary))' }}>4 (Basse)</option>
-                        <option value="5" style={{ color: 'rgb(var(--color-text-primary))' }}>5 (Très basse)</option>
-                      </select>
-                      {errors.priority &&
-                        <div className="flex items-center gap-2 mt-1 text-red-600 dark:text-red-400 text-sm" role="alert">
-                          <AlertCircle size={14} aria-hidden="true" />
-                          {errors.priority}
+                        <div className="relative">
+                          <select
+                            id="task-priority"
+                            value={formData.priority}
+                            onChange={(e) => handleInputChange('priority', Number(e.target.value))}
+                            className="w-full px-4 pr-12 h-12 border rounded-lg focus:outline-none hover:border-blue-500 focus:border-blue-600 focus:border-2 transition-all text-base border-slate-200 dark:border-slate-700 appearance-none cursor-pointer"
+                            style={{
+                              backgroundColor: 'rgb(var(--color-surface))',
+                              color: formData.priority === 0 ? 'rgb(var(--color-text-muted))' : 'rgb(var(--color-text-primary))',
+                            }}
+                            aria-label="Sélectionner la priorité de la tâche"
+                          >
+                            <option value="0" disabled hidden>Choisir une priorité</option>
+                            <option value="1" style={{ color: 'rgb(var(--color-text-primary))' }}>1 (Très haute)</option>
+                            <option value="2" style={{ color: 'rgb(var(--color-text-primary))' }}>2 (Haute)</option>
+                            <option value="3" style={{ color: 'rgb(var(--color-text-primary))' }}>3 (Moyenne)</option>
+                            <option value="4" style={{ color: 'rgb(var(--color-text-primary))' }}>4 (Basse)</option>
+                            <option value="5" style={{ color: 'rgb(var(--color-text-primary))' }}>5 (Très basse)</option>
+                          </select>
+                          <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 pointer-events-none" />
                         </div>
-                      }
+                        {errors.priority &&
+                          <div className="flex items-center gap-2 mt-1 text-red-600 dark:text-red-400 text-sm" role="alert">
+                            <AlertCircle size={14} aria-hidden="true" />
+                            {errors.priority}
+                          </div>
+                        }
                     </div>
 
                     <div>
@@ -826,7 +888,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
                                         name={info.name}
                                         email={info.email}
                                         avatar={info.avatar}
-                                        onAction={() => toggleCollaborator(userId)}
+                                        isPending={info.isPending}
+                                        onAction={() => handleRemoveCollaborator(userId)}
                                         variant="remove"
                                       />
                                     );
@@ -860,7 +923,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
                                 <span className="font-medium" style={{ color: 'rgb(var(--color-text-primary))' }}>
                                   {formData.name || 'Nom de la tâche'}
                                 </span>
-                                {formData.bookmarked && <Bookmark size={16} className="text-yellow-500" />}
+                                {formData.bookmarked && <BookmarkCheck size={16} className="text-yellow-500" fill="#EAB308" />}
                               </div>
                               <div className="flex items-center gap-4 text-sm" style={{ color: 'rgb(var(--color-text-secondary))' }}>
                                 <span>Priorité {formData.priority}</span>
@@ -973,3 +1036,4 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, isOpen, onClose, onSave, is
 };
 
 export default TaskModal;
+
