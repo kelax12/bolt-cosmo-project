@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase, supabaseAdmin } from '../lib/supabase';
+import { toast } from 'sonner';
 
 export type Task = {
   id: string;
@@ -68,6 +70,7 @@ export type FriendRequest = {
   receiverId: string;
   status: 'pending' | 'accepted' | 'rejected';
   timestamp: string;
+  sender?: User;
 };
 
 export type Habit = {
@@ -126,6 +129,7 @@ type TaskContextType = {
   searchTerm: string;
   selectedCategories: string[];
   user: User | null;
+  loading: boolean;
   messages: Message[];
   friendRequests: FriendRequest[];
   habits: Habit[];
@@ -150,15 +154,16 @@ type TaskContextType = {
   updateColorSettings: (colors: ColorSettings) => void;
   setPriorityRange: (range: [number, number]) => void;
   setSearchTerm: (term: string) => void;
-  setSelectedCategories: (categories: string[]) => void;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+    setSelectedCategories: (categories: string[]) => void;
+    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    loginWithGoogle: () => Promise<void>;
+    logout: () => void;
     watchAd: () => void;
-    consumePremiumToken: () => void;
-    isPremium: () => boolean;
-    sendMessage: (receiverId: string, content: string, taskId?: string) => void;
-    sendFriendRequest: (receiverId: string) => void;
+  consumePremiumToken: () => void;
+  isPremium: () => boolean;
+  sendMessage: (receiverId: string, content: string, taskId?: string) => void;
+  sendFriendRequest: (receiverId: string) => void;
   acceptFriendRequest: (requestId: string) => void;
   rejectFriendRequest: (requestId: string) => void;
   shareTask: (taskId: string, userId: string, permission: 'responsible' | 'editor' | 'observer') => void;
@@ -175,276 +180,26 @@ type TaskContextType = {
   updateCategory: (id: string, updates: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
   addOKRCategory: (category: OKRCategory) => void;
-    updateOKRCategory: (id: string, updates: Partial<OKRCategory>) => void;
-    deleteOKRCategory: (id: string) => void;
-    markMessagesAsRead: () => void;
-  };
-
-
-const TaskContext = createContext<TaskContextType | undefined>(undefined);
-
-const initialTasks: Task[] = [
-  { id: '1', name: 'Rédaction rapport SEO', priority: 5, category: 'blue', deadline: '2025-06-13T00:00:00.000Z', estimatedTime: 120, createdAt: '2025-05-29T00:00:00.000Z', bookmarked: true, completed: false },
-  { id: '2', name: 'Optimisation base de données', priority: 4, category: 'red', deadline: '2025-06-15T00:00:00.000Z', estimatedTime: 180, createdAt: '2025-05-30T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '3', name: 'Design Système UI', priority: 3, category: 'purple', deadline: '2025-06-20T00:00:00.000Z', estimatedTime: 300, createdAt: '2025-05-31T00:00:00.000Z', bookmarked: true, completed: false },
-  { id: 'c1', name: 'Audit Accessibilité Web', priority: 4, category: 'blue', deadline: '2025-06-14T00:00:00.000Z', estimatedTime: 120, createdAt: '2025-06-01T00:00:00.000Z', bookmarked: false, completed: false, isCollaborative: true, sharedBy: 'Marie Dupont', collaborators: ['Utilisateur Demo', 'Thomas Laurent'], permissions: 'editor' },
-  { id: 'c2', name: 'Refactoring CSS Modules', priority: 2, category: 'purple', deadline: '2025-06-16T00:00:00.000Z', estimatedTime: 90, createdAt: '2025-06-02T00:00:00.000Z', bookmarked: true, completed: false, isCollaborative: true, sharedBy: 'Sophia Martin', collaborators: ['Utilisateur Demo'], permissions: 'responsible' },
-  { id: '4', name: 'Réunion client - Roadmap', priority: 5, category: 'orange', deadline: '2025-06-12T10:00:00.000Z', estimatedTime: 60, createdAt: '2025-06-01T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '5', name: 'Audit sécurité Cloud', priority: 4, category: 'red', deadline: '2025-06-25T00:00:00.000Z', estimatedTime: 240, createdAt: '2025-06-02T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '6', name: 'Formation TypeScript avancée', priority: 2, category: 'green', deadline: '2025-07-01T00:00:00.000Z', estimatedTime: 480, createdAt: '2025-06-03T00:00:00.000Z', bookmarked: true, completed: false },
-  { id: '7', name: 'Préparation démo V2', priority: 5, category: 'blue', deadline: '2025-06-14T00:00:00.000Z', estimatedTime: 90, createdAt: '2025-06-04T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '8', name: 'Correction bugs sprint #42', priority: 4, category: 'red', deadline: '2025-06-13T18:00:00.000Z', estimatedTime: 150, createdAt: '2025-06-05T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '9', name: 'Mise à jour documentation API', priority: 2, category: 'purple', deadline: '2025-06-30T00:00:00.000Z', estimatedTime: 120, createdAt: '2025-06-06T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '10', name: 'Planification marketing Q3', priority: 3, category: 'orange', deadline: '2025-06-28T00:00:00.000Z', estimatedTime: 180, createdAt: '2025-06-07T00:00:00.000Z', bookmarked: true, completed: false },
-  { id: '11', name: 'Refactoring modules Auth', priority: 4, category: 'red', deadline: '2025-06-18T00:00:00.000Z', estimatedTime: 210, createdAt: '2025-06-08T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '12', name: 'Tests unitaires Core', priority: 3, category: 'blue', deadline: '2025-06-22T00:00:00.000Z', estimatedTime: 150, createdAt: '2025-06-09T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '13', name: 'Déploiement Staging', priority: 5, category: 'orange', deadline: '2025-06-12T16:00:00.000Z', estimatedTime: 45, createdAt: '2025-06-10T00:00:00.000Z', bookmarked: true, completed: false },
-  { id: '14', name: 'Recherche UX - Mobile App', priority: 2, category: 'purple', deadline: '2025-07-10T00:00:00.000Z', estimatedTime: 360, createdAt: '2025-06-11T00:00:00.000Z', bookmarked: false, completed: false },
-  { id: '15', name: 'Conf call investisseurs', priority: 5, category: 'blue', deadline: '2025-06-15T14:00:00.000Z', estimatedTime: 60, createdAt: '2025-06-12T00:00:00.000Z', bookmarked: false, completed: false },
-  ...Array.from({ length: 35 }).map((_, i) => ({
-    id: `t-bulk-${i}`,
-    name: `Tâche arbitraire #${i + 16} - Demo`,
-    priority: Math.floor(Math.random() * 5) + 1,
-    category: ['blue', 'red', 'green', 'purple', 'orange'][Math.floor(Math.random() * 5)],
-    deadline: new Date(Date.now() + Math.random() * 1000000000).toISOString(),
-    estimatedTime: Math.floor(Math.random() * 120) + 15,
-    createdAt: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
-    bookmarked: Math.random() > 0.8,
-    completed: Math.random() > 0.7,
-    completedAt: Math.random() > 0.7 ? new Date().toISOString() : undefined
-  }))
-];
-
-const initialFriends: User[] = [
-  { id: 'marie-dupont', name: 'Marie Dupont', email: 'marie@example.com', avatar: '👩‍💼', premiumTokens: 5, premiumWinStreak: 12, lastTokenConsumption: new Date().toISOString(), autoValidation: true },
-  { id: 'thomas-laurent', name: 'Thomas Laurent', email: 'thomas@example.com', avatar: '👨‍💻', premiumTokens: 0, premiumWinStreak: 0, lastTokenConsumption: new Date().toISOString(), autoValidation: false },
-  { id: 'sophia-martin', name: 'Sophia Martin', email: 'sophia@example.com', avatar: '👩‍🔬', premiumTokens: 2, premiumWinStreak: 3, lastTokenConsumption: new Date().toISOString(), autoValidation: false },
-  { id: 'f1', name: 'Alice Martin', email: 'alice@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice', premiumTokens: 0, premiumWinStreak: 0, lastTokenConsumption: new Date().toISOString(), autoValidation: false },
-  { id: 'f3', name: 'Sophie Petit', email: 'sophie@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie', premiumTokens: 5, premiumWinStreak: 12, lastTokenConsumption: new Date().toISOString(), autoValidation: true },
-  { id: 'f4', name: 'Lucas Dubois', email: 'lucas@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas', premiumTokens: 2, premiumWinStreak: 3, lastTokenConsumption: new Date().toISOString(), autoValidation: false },
-  { id: 'f5', name: 'Emma Leroy', email: 'emma@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma', premiumTokens: 10, premiumWinStreak: 25, lastTokenConsumption: new Date().toISOString(), autoValidation: true }
-];
-
-const initialLists: TaskList[] = [
-  { id: 'work', name: 'Travail', taskIds: ['1', '2', '4', '5', '8', '11', '13', '15'], color: 'blue' },
-  { id: 'personal', name: 'Personnel', taskIds: ['3', '6', '14'], color: 'purple' },
-  { id: 'urgent', name: 'Urgent', taskIds: ['4', '13', '15'], color: 'red' },
-];
-
-const defaultUser: User = {
-  id: 'user1',
-  name: 'Utilisateur Demo',
-  email: 'demo@cosmo.app',
-  premiumTokens: 3,
-  premiumWinStreak: 5,
-  lastTokenConsumption: new Date().toISOString(),
-  autoValidation: false,
+  updateOKRCategory: (id: string, updates: Partial<OKRCategory>) => void;
+  deleteOKRCategory: (id: string) => void;
+  markMessagesAsRead: () => void;
 };
 
-const generatePastCompletions = (startDaysAgo: number, completionRate: number) => {
-  const completions: { [date: string]: boolean } = {};
-  const today = new Date();
-  for (let i = 0; i < startDaysAgo; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    if (Math.random() < completionRate) {
-      completions[`${year}-${month}-${day}`] = true;
-    }
-  }
-  return completions;
-};
+  const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
-const calculateStreak = (completions: { [date: string]: boolean }) => {
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    if (completions[dateStr]) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-  return streak;
-};
-
-const initialHabits: Habit[] = (() => {
-  const habits = [
-    { id: '1', name: 'Lecture 30 min', estimatedTime: 30, completions: generatePastCompletions(90, 0.85), streak: 0, color: '#3B82F6', createdAt: '2025-04-01T00:00:00.000Z' },
-    { id: '2', name: 'Méditation', estimatedTime: 15, completions: generatePastCompletions(120, 0.7), streak: 0, color: '#8B5CF6', createdAt: '2025-03-01T00:00:00.000Z' },
-    { id: '3', name: 'Sport matinal', estimatedTime: 45, completions: generatePastCompletions(180, 0.6), streak: 0, color: '#10B981', createdAt: '2025-01-15T00:00:00.000Z' },
-    { id: '4', name: 'Veille technique', estimatedTime: 20, completions: generatePastCompletions(60, 0.9), streak: 0, color: '#F59E0B', createdAt: '2025-05-01T00:00:00.000Z' },
-    { id: '5', name: 'Écriture journal', estimatedTime: 10, completions: generatePastCompletions(200, 0.75), streak: 0, color: '#EC4899', createdAt: '2024-12-01T00:00:00.000Z' },
-    { id: '6', name: 'Étirements', estimatedTime: 10, completions: generatePastCompletions(150, 0.65), streak: 0, color: '#6366F1', createdAt: '2025-02-10T00:00:00.000Z' },
-    { id: '7', name: 'Boire 2L d\'eau', estimatedTime: 5, completions: generatePastCompletions(300, 0.95), streak: 0, color: '#06B6D4', createdAt: '2024-10-01T00:00:00.000Z' },
-    { id: '8', name: 'Apprendre une langue', estimatedTime: 15, completions: generatePastCompletions(45, 0.5), streak: 0, color: '#F97316', createdAt: '2025-05-15T00:00:00.000Z' },
-    { id: '9', name: 'Sans réseaux sociaux', estimatedTime: 0, completions: generatePastCompletions(30, 0.4), streak: 0, color: '#EF4444', createdAt: '2025-06-01T00:00:00.000Z' },
-    { id: '10', name: 'Cuisine saine', estimatedTime: 40, completions: generatePastCompletions(60, 0.8), streak: 0, color: '#84CC16', createdAt: '2025-05-01T00:00:00.000Z' }
-  ];
-  return habits.map(h => ({ ...h, streak: calculateStreak(h.completions) }));
-})();
-
-const initialOKRs: OKR[] = [
-    {
-    id: '1',
-    title: 'Sport',
-    description: 'améliorer ma santé',
-    category: 'health',
-    startDate: '2026-01-01',
-    endDate: '2026-02-01',
-    completed: false,
-    estimatedTime: 1200,
-    keyResults: [
-        { id: '1-1', title: 'Faire 30 séances haut du corps', currentValue: 12, targetValue: 30, unit: 'séances', completed: false, estimatedTime: 60, history: [{ date: '2026-01-02', increment: 2 }, { date: '2026-01-05', increment: 3 }, { date: '2026-01-08', increment: 4 }, { date: '2026-01-12', increment: 3 }] },
-        { id: '1-2', title: '10 séances bas du corps', currentValue: 4, targetValue: 10, unit: 'séances', completed: false, estimatedTime: 60, history: [{ date: '2026-01-03', increment: 2 }, { date: '2026-01-10', increment: 2 }] },
-        { id: '1-3', title: '8 séances de cardio', currentValue: 3, targetValue: 8, unit: 'séances', completed: false, estimatedTime: 45, history: [{ date: '2026-01-04', increment: 1 }, { date: '2026-01-11', increment: 2 }] },
-        { id: '1-4', title: "5 séances d'étirements", currentValue: 2, targetValue: 5, unit: 'séances', completed: false, estimatedTime: 15, history: [{ date: '2026-01-06', increment: 1 }, { date: '2026-01-13', increment: 1 }] }
-      ],
-  },
-    {
-      id: '2',
-      title: 'Productivité',
-      description: 'Être plus productif au quotidien',
-      category: 'professional',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
-      completed: false,
-      estimatedTime: 2400,
-      keyResults: [
-        { id: '2-1', title: 'Planifier 30 journées de travail', currentValue: 10, targetValue: 30, unit: 'jours', completed: false, estimatedTime: 15 },
-        { id: '2-2', title: 'Compléter 50 tâches prioritaires', currentValue: 25, targetValue: 50, unit: 'tâches', completed: false, estimatedTime: 30 },
-        { id: '2-3', title: 'Réaliser 20 sessions de deep work', currentValue: 6, targetValue: 20, unit: 'sessions', completed: false, estimatedTime: 90 },
-        { id: '2-4', title: 'Faire 12 revues hebdomadaires', currentValue: 3, targetValue: 12, unit: 'revues', completed: false, estimatedTime: 45 }
-      ],
-    },
-    {
-      id: '3',
-      title: 'Apprentissage de l\'Anglais',
-      description: 'Améliorer mon niveau d\'anglais (écoute, lecture, oral, vocabulaire et écriture)',
-      category: 'learning',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
-      completed: false,
-      estimatedTime: 3000,
-      keyResults: [
-        { id: '3-1', title: 'Réaliser 40 sessions d’écoute en anglais (≥ 20 min)', currentValue: 15, targetValue: 40, unit: 'sessions', completed: false, estimatedTime: 20 },
-        { id: '3-2', title: 'Effectuer 30 sessions de lecture en anglais', currentValue: 8, targetValue: 30, unit: 'sessions', completed: false, estimatedTime: 15 },
-        { id: '3-3', title: 'Compléter 25 sessions de pratique orale', currentValue: 5, targetValue: 25, unit: 'sessions', completed: false, estimatedTime: 15 },
-        { id: '3-4', title: 'Apprendre 500 mots de vocabulaire', currentValue: 120, targetValue: 500, unit: 'mots', completed: false, estimatedTime: 1 },
-        { id: '3-5', title: 'Écrire 20 textes courts en anglais', currentValue: 4, targetValue: 20, unit: 'textes', completed: false, estimatedTime: 15 }
-        ],
-      },
-      {
-        id: '4',
-        title: 'Habitudes',
-        description: 'Mettre en place de bonnes habitudes au quotidien',
-        category: 'personal',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
-        completed: false,
-        estimatedTime: 1825,
-        keyResults: [
-          { id: '4-1', title: 'Se lever à heure régulière 20 jours', currentValue: 12, targetValue: 20, unit: 'jours', completed: false, estimatedTime: 5 },
-          { id: '4-2', title: 'Lire 15 sessions', currentValue: 6, targetValue: 15, unit: 'sessions', completed: false, estimatedTime: 30 },
-          { id: '4-3', title: 'Marcher au moins 8 000 pas 20 jours', currentValue: 8, targetValue: 20, unit: 'jours', completed: false, estimatedTime: 45 },
-          { id: '4-4', title: 'Limiter le temps d’écran 15 jours', currentValue: 5, targetValue: 15, unit: 'jours', completed: false, estimatedTime: 5 },
-          { id: '4-5', title: 'Prendre du temps pour soi 20 fois (≥ 15 min)', currentValue: 10, targetValue: 20, unit: 'fois', completed: false, estimatedTime: 15 }
-        ],
-      }
-    ];
-
-const initialEvents: CalendarEvent[] = [
-  { id: 'e1', title: 'Sprint Planning', start: '2025-06-12T09:00:00.000Z', end: '2025-06-12T10:30:00.000Z', color: 'blue', taskId: '4' },
-  { id: 'e2', title: 'Review Design', start: '2025-06-13T14:00:00.000Z', end: '2025-06-13T15:00:00.000Z', color: 'purple', taskId: '3' },
-  { id: 'e3', title: 'Demo Client', start: '2025-06-14T11:00:00.000Z', end: '2025-06-14T12:00:00.000Z', color: 'blue', taskId: '7' },
-  { id: 'e4', title: 'Audit Sécurité', start: '2025-06-15T10:00:00.000Z', end: '2025-06-15T12:00:00.000Z', color: 'red', taskId: '5' },
-  { id: 'e5', title: 'Lunch Team', start: '2025-06-12T12:00:00.000Z', end: '2025-06-12T13:30:00.000Z', color: 'green', taskId: '' },
-  { id: 'e6', title: 'Workshop OKR', start: '2025-06-16T15:00:00.000Z', end: '2025-06-16T17:00:00.000Z', color: 'orange', taskId: '' },
-  ...Array.from({ length: 85 }).map((_, i) => {
-    const baseDate = new Date('2025-06-01T00:00:00.000Z');
-    const randomDay = Math.floor(Math.random() * 60); // Sur Juin et Juillet
-    const startHour = 8 + Math.floor(Math.random() * 10);
-    const durationMinutes = 30 + Math.floor(Math.random() * 150);
-    
-    const startDate = new Date(baseDate);
-    startDate.setDate(baseDate.getDate() + randomDay);
-    startDate.setHours(startHour);
-    startDate.setMinutes(Math.random() > 0.5 ? 30 : 0);
-    
-    const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
-    
-    const eventTitles = [
-      'Sync Hebdo', 'Point Projet', 'Focus Deep Work', 'Appel Client', 
-      'Review Design', 'Brainstorming Feature', 'Daily Standup', 'Lunch Networking',
-      'One-on-One', 'Formation Interne', 'Audit Performance', 'Bug Bash',
-      'Planning Sprint', 'Rétrospective', 'Démo Produit', 'Session de Pair Programming',
-      'Mise à jour Roadmap', 'Check-in Ventes', 'Café équipe', 'Réflexion Stratégique',
-      'Analyse Métriques', 'QA Session', 'Préparation Board', 'Interview Candidat'
-    ];
-    
-    return {
-      id: `e-bulk-${i}`,
-      title: eventTitles[i % eventTitles.length],
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
-      color: ['blue', 'red', 'green', 'purple', 'orange', 'okr'][Math.floor(Math.random() * 6)],
-      taskId: ''
-    };
-  })
-];
-
-const initialCategories: Category[] = [
-  { id: 'red', name: 'Haute Priorité', color: '#EF4444' },
-  { id: 'blue', name: 'Travail', color: '#3B82F6' },
-  { id: 'green', name: 'Santé', color: '#10B981' },
-  { id: 'purple', name: 'Personnel', color: '#8B5CF6' },
-  { id: 'orange', name: 'Stratégique', color: '#F59E0B' },
-  { id: 'okr', name: 'Objectifs', color: '#6366F1' },
-];
-
-const initialOKRCategories: OKRCategory[] = [
-  { id: 'personal', name: 'Personnel', color: 'blue', icon: '👤' },
-  { id: 'professional', name: 'Professionnel', color: 'green', icon: '💼' },
-  { id: 'health', name: 'Santé', color: 'red', icon: '❤️' },
-  { id: 'learning', name: 'Apprentissage', color: 'purple', icon: '📚' },
-];
-
-const initialMessages: Message[] = [
-  { id: 'm1', senderId: 'marie-dupont', receiverId: 'equipe-design', content: 'Salut l\'équipe ! Avez-vous vu les derniers retours sur la maquette ?', timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), read: true },
-  { id: 'm2', senderId: 'thomas-laurent', receiverId: 'equipe-design', content: 'Oui, je suis en train de les intégrer. Ça devrait être prêt pour demain.', timestamp: new Date(Date.now() - 3600000 * 1.5).toISOString(), read: true },
-  { id: 'm3', senderId: 'user1', receiverId: 'equipe-design', content: 'Super Thomas ! J\'ai aussi ajouté quelques notes sur le Design Système.', timestamp: new Date(Date.now() - 3600000 * 1).toISOString(), read: true },
-  { id: 'm4', senderId: 'marie-dupont', receiverId: 'equipe-design', content: 'Parfait, on fait un point rapide à 14h ?', timestamp: new Date(Date.now() - 3600000 * 0.5).toISOString(), read: true },
-  { id: 'm5', senderId: 'thomas-laurent', receiverId: 'equipe-design', content: 'Ça me va pour 14h.', timestamp: new Date(Date.now() - 3600000 * 0.2).toISOString(), read: true },
-];
-
-export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [lists, setLists] = useState<TaskList[]>(initialLists);
-  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [lists, setLists] = useState<TaskList[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [user, setUser] = useState<User | null>(null);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([
-    {
-      id: 'fr-demo-1',
-      senderId: 'alice@example.com',
-      receiverId: 'demo@example.com',
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    }
-  ]);
-  const [habits, setHabits] = useState<Habit[]>(initialHabits);
-  const [okrs, setOkrs] = useState<OKR[]>(initialOKRs);
-  const [okrCategories, setOkrCategories] = useState<OKRCategory[]>(initialOKRCategories);
-  const [friends, setFriends] = useState<User[]>(initialFriends);
+  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [okrs, setOkrs] = useState<OKR[]>([]);
+  const [okrCategories, setOkrCategories] = useState<OKRCategory[]>([]);
+  const [friends, setFriends] = useState<User[]>([]);
   const [priorityRange, setPriorityRange] = useState<[number, number]>([1, 5]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -455,8 +210,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return acc;
   }, {} as ColorSettings);
 
-
-  // Helper for formatting date as "YYYY-MM-DD" in local time
   const getLocalDateString = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -464,88 +217,486 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return `${year}-${month}-${day}`;
   };
 
-    useEffect(() => {
+  const mapProfileToUser = (profile: any): User => ({
+    id: profile.id,
+    name: profile.name || 'Utilisateur',
+    email: profile.email || '',
+    avatar: profile.avatar,
+    premiumTokens: profile.premium_tokens ?? 0,
+    premiumWinStreak: profile.premium_win_streak ?? 0,
+    lastTokenConsumption: profile.last_token_consumption,
+    subscriptionEndDate: profile.subscription_end_date,
+    autoValidation: profile.auto_validation ?? false,
+  });
+
+    const syncProfile = async (supabaseUser: any) => {
       try {
-        const savedTasks = localStorage.getItem('tasks');
-        const savedLists = localStorage.getItem('taskLists');
-        const savedEvents = localStorage.getItem('events');
-        const savedCategories = localStorage.getItem('categories');
-        const savedUser = localStorage.getItem('user');
-        const savedHabits = localStorage.getItem('habits');
-        const savedOKRs = localStorage.getItem('okrs');
-        const savedOKRCategories = localStorage.getItem('okrCategories');
-        const savedFavoriteColors = localStorage.getItem('favoriteColors');
+        console.log('[DEBUG] Syncing profile for user:', supabaseUser.id);
         
-        if (savedTasks) setTasks(JSON.parse(savedTasks));
-        if (savedLists) setLists(JSON.parse(savedLists));
-        if (savedEvents) setEvents(JSON.parse(savedEvents));
-        if (savedCategories) setCategories(JSON.parse(savedCategories));
-        if (savedUser) setUser(JSON.parse(savedUser));
-        if (savedHabits) setHabits(JSON.parse(savedHabits));
-        
-        if (savedOKRs) {
-          let parsedOKRs = JSON.parse(savedOKRs);
-          if (Array.isArray(parsedOKRs)) {
-            // Force update for demo OKRs to ensure they reflect the new initial state
-            parsedOKRs = parsedOKRs.map((o: any) => {
-              const demoOKR = initialOKRs.find(demo => demo.id === o.id);
-              if (demoOKR && ['1', '2', '3', '4'].includes(o.id)) {
-                return demoOKR;
-              }
-              return o;
-            });
-            setOkrs(parsedOKRs);
-          }
+        const profileData = {
+          id: supabaseUser.id,
+          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Utilisateur',
+          email: supabaseUser.email,
+          premium_tokens: 3,
+          premium_win_streak: 0,
+          auto_validation: false,
+        };
+
+        // Add timeout to prevent infinite hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout syncing profile')), 10000)
+        );
+
+        const upsertPromise = supabase
+          .from('profiles')
+          .upsert(profileData, { onConflict: 'id' })
+          .select()
+          .single();
+
+        const { data: profile, error } = await Promise.race([upsertPromise, timeoutPromise]) as any;
+
+        if (error) {
+          console.error('[DEBUG] Profile sync error:', error.message);
+          // Still set a basic user object so the app can continue
+          setUser(mapProfileToUser({ ...profileData, id: supabaseUser.id }));
+          return { success: false, error: `Erreur profil: ${error.message}` };
+        }
+
+        if (profile) {
+          console.log('[DEBUG] Profile synced successfully');
+          setUser(mapProfileToUser(profile));
+          return { success: true };
         }
         
-        if (savedOKRCategories) setOkrCategories(JSON.parse(savedOKRCategories));
-        if (savedFavoriteColors) setFavoriteColors(JSON.parse(savedFavoriteColors));
-      } catch (error) {
-        console.error("Error loading data from localStorage:", error);
-        // Fallback to initial state if parsing fails
+        // Fallback if no profile returned but no error
+        setUser(mapProfileToUser(profileData));
+        return { success: true };
+      } catch (err: any) {
+        console.error('[DEBUG] Unexpected error in syncProfile:', err);
+        // Ensure user is at least partially set to unblock the UI
+        setUser(mapProfileToUser({ 
+          id: supabaseUser.id, 
+          email: supabaseUser.email,
+          name: supabaseUser.user_metadata?.name || 'Utilisateur'
+        }));
+        return { success: false, error: `Erreur inattendue: ${err.message}` };
       }
-    }, []);
+    };
 
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    localStorage.setItem('taskLists', JSON.stringify(lists));
-    localStorage.setItem('events', JSON.stringify(events));
-    localStorage.setItem('categories', JSON.stringify(categories));
-    localStorage.setItem('habits', JSON.stringify(habits));
-    localStorage.setItem('okrs', JSON.stringify(okrs));
-    localStorage.setItem('okrCategories', JSON.stringify(okrCategories));
-    localStorage.setItem('favoriteColors', JSON.stringify(favoriteColors));
-    if (user) localStorage.setItem('user', JSON.stringify(user));
-  }, [tasks, lists, events, categories, user, habits, okrs, favoriteColors]);
+    const fetchData = async (userId: string) => {
+      try {
+        console.log('[DEBUG] Fetching data for user:', userId);
+        
+        const timeout = 15000; // 15s timeout for data fetching
+        const withTimeout = (promise: Promise<any>) => 
+          Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeout))
+          ]);
+
+          const results = await Promise.allSettled([
+            withTimeout(supabase.from('habits').select('*').eq('user_id', userId)),
+            withTimeout(supabase.from('okrs').select('*, key_results:okr_key_results(*, history:okr_key_result_history(*))').eq('user_id', userId)),
+            withTimeout(supabase.from('calendar_events').select('*').eq('user_id', userId)),
+            withTimeout(supabase.from('messages').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)),
+            withTimeout(supabase.from('categories').select('*')),
+            withTimeout(supabase.from('okr_categories').select('*')),
+            withTimeout(supabase.from('tasks').select('*').eq('user_id', userId)),
+            withTimeout(supabase.from('task_lists').select('*').eq('user_id', userId)),
+            withTimeout(supabase.from('task_list_items').select('*')),
+            withTimeout(supabase.from('friendships').select('*').or(`sender_id.eq.${userId},receiver_id.eq.${userId}`))
+          ]);
+
+          const [
+            habitsRes,
+            okrsRes,
+            eventsRes,
+            messagesRes,
+            categoriesRes,
+            okrCatsRes,
+            tasksRes,
+            listsRes,
+            listItemsRes,
+            friendshipsRes
+          ] = results.map(r => r.status === 'fulfilled' ? r.value : { data: null, error: r.reason });
+
+          if (friendshipsRes.data) {
+            const allFriendshipUserIds = Array.from(new Set(friendshipsRes.data.flatMap((f: any) => [f.sender_id, f.receiver_id])));
+            let allProfiles: { [key: string]: User } = {};
+
+            if (allFriendshipUserIds.length > 0) {
+              const { data: profiles } = await withTimeout(supabase.from('profiles').select('*').in('id', allFriendshipUserIds));
+              if (profiles) {
+                allProfiles = profiles.reduce((acc: any, p: any) => {
+                  acc[p.id] = mapProfileToUser(p);
+                  return acc;
+                }, {});
+              }
+            }
+
+            setFriendRequests(friendshipsRes.data.map((f: any) => ({
+              id: f.id,
+              senderId: f.sender_id,
+              receiverId: f.receiver_id,
+              status: f.status,
+              timestamp: f.created_at,
+              sender: allProfiles[f.sender_id]
+            })));
+
+            const acceptedFriendships = friendshipsRes.data.filter((f: any) => f.status === 'accepted');
+            const friendIds = acceptedFriendships.map((f: any) => f.sender_id === userId ? f.receiver_id : f.sender_id);
+            setFriends(friendIds.map(id => allProfiles[id]).filter(Boolean));
+          }
 
 
-  const addTask = (task: Task) => setTasks(prev => [...prev, task]);
-  const deleteTask = (id: string) => {
+        if (tasksRes.data) {
+          setTasks(tasksRes.data.map((t: any) => ({
+            ...t,
+            estimatedTime: t.estimated_time,
+            createdAt: t.created_at,
+            bookmarked: t.bookmarked,
+            completed: t.completed,
+            completedAt: t.completed_at,
+            isCollaborative: t.is_collaborative,
+            sharedBy: t.shared_by,
+            collaborators: t.collaborators || [],
+            collaboratorValidations: t.collaborator_validations,
+            pendingInvites: t.pending_invites
+          })));
+        }
+
+        if (listsRes.data) {
+          const items = listItemsRes.data || [];
+          setLists(listsRes.data.map((l: any) => ({
+            ...l,
+            taskIds: items
+              .filter((li: any) => li.list_id === l.id)
+              .map((li: any) => li.task_id)
+          })));
+        }
+
+        if (habitsRes.data) {
+          const habitIds = habitsRes.data.map((h: any) => h.id);
+          let completions: any[] = [];
+          if (habitIds.length > 0) {
+            try {
+              const { data } = await withTimeout(supabase.from('habit_completions').select('*').in('habit_id', habitIds));
+              completions = data || [];
+            } catch (e) {
+              console.warn('[DEBUG] Habit completions fetch failed:', e);
+            }
+          }
+          
+          setHabits(habitsRes.data.map((h: any) => ({
+            ...h,
+            estimatedTime: h.estimated_time,
+            completions: completions.filter(c => c.habit_id === h.id).reduce((acc: any, curr) => {
+              acc[curr.completed_at.split('T')[0]] = true;
+              return acc;
+            }, {}) || {}
+          })));
+        }
+
+        if (okrsRes.data) setOkrs(okrsRes.data.map((o: any) => ({
+          ...o,
+          startDate: o.start_date,
+          endDate: o.end_date,
+          keyResults: (o.key_results || []).map((kr: any) => ({
+            ...kr,
+            currentValue: kr.current_value,
+            targetValue: kr.target_value,
+            history: (kr.history || []).map((h: any) => ({ date: h.created_at.split('T')[0], increment: h.increment }))
+          }))
+        })));
+
+        if (eventsRes.data) setEvents(eventsRes.data.map((e: any) => ({
+          ...e,
+          start: e.start_time,
+          end: e.end_time,
+          taskId: e.task_id
+        })));
+
+        if (messagesRes.data) setMessages(messagesRes.data.map((m: any) => ({
+          ...m,
+          senderId: m.sender_id,
+          receiverId: m.receiver_id,
+          timestamp: m.created_at,
+          taskId: m.task_id
+        })));
+
+        if (categoriesRes.data) setCategories(categoriesRes.data);
+        if (okrCatsRes.data) setOkrCategories(okrCatsRes.data);
+        console.log('[DEBUG] Fetching completed');
+      } catch (err) {
+        console.error('[DEBUG] Global error in fetchData:', err);
+      }
+    };
+
+      useEffect(() => {
+        let mounted = true;
+
+        const initAuth = async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!mounted) return;
+
+            if (session?.user) {
+              console.log('[DEBUG] Initial Session Found:', session.user.id);
+              await syncProfile(session.user);
+              await fetchData(session.user.id);
+            } else {
+              console.log('[DEBUG] No Initial Session');
+              setUser(null);
+            }
+          } catch (err) {
+            console.error('[DEBUG] Auth Init Error:', err);
+          } finally {
+            if (mounted) setLoading(false);
+          }
+        };
+
+        initAuth();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (!mounted) return;
+          console.log('[DEBUG] Auth Event:', event, session?.user?.email);
+
+          if (session?.user) {
+            // Only sync and fetch if the user ID changed or it's a login/refresh event
+            if (!user || user.id !== session.user.id || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              console.log('[DEBUG] Session Active/Refreshed');
+              await syncProfile(session.user);
+              await fetchData(session.user.id);
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log('[DEBUG] User explicitly signed out');
+            setUser(null);
+            setTasks([]);
+            setLists([]);
+            setHabits([]);
+            setOkrs([]);
+            setEvents([]);
+            setMessages([]);
+            setCategories([]);
+            setOkrCategories([]);
+          }
+          
+          setLoading(false);
+        });
+
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
+      }, []);
+
+    useEffect(() => {
+      // Data is now managed strictly via Supabase for all users including demo
+    }, [tasks, lists, user]);
+
+
+  const addTask = async (task: Task) => {
+    if (user) {
+      const { data, error } = await supabase.from('tasks').insert({
+        id: task.id,
+        user_id: user.id,
+        name: task.name,
+        priority: task.priority,
+        category_name_legacy: task.category,
+        deadline: task.deadline,
+        estimated_time: task.estimatedTime,
+        bookmarked: task.bookmarked,
+        completed: task.completed,
+        completed_at: task.completedAt,
+        is_collaborative: task.isCollaborative,
+        shared_by: task.sharedBy,
+        collaborators: task.collaborators,
+        permissions: task.permissions
+      }).select().single();
+      
+      if (error) {
+        console.error('Error adding task:', error);
+        return;
+      }
+    }
+    setTasks(prev => [...prev, task]);
+  };
+
+  const deleteTask = async (id: string) => {
+    if (user) {
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting task:', error);
+        return;
+      }
+    }
     setTasks(prev => prev.filter(t => t.id !== id));
     setLists(prev => prev.map(l => ({ ...l, taskIds: l.taskIds.filter(tid => tid !== id) })));
   };
-  const toggleBookmark = (id: string) => setTasks(prev => prev.map(t => t.id === id ? { ...t, bookmarked: !t.bookmarked } : t));
-  const toggleComplete = (id: string) => setTasks(prev => prev.map(t => {
-    if (t.id === id) {
-      const isCompleting = !t.completed;
-      return { ...t, completed: isCompleting, completedAt: isCompleting ? new Date().toISOString() : undefined };
+
+  const toggleBookmark = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task && user) {
+      const { error } = await supabase.from('tasks').update({ bookmarked: !task.bookmarked }).eq('id', id);
+      if (error) {
+        console.error('Error toggling bookmark:', error);
+        return;
+      }
     }
-    return t;
-  }));
-  const updateTask = (id: string, updates: Partial<Task>) => setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  const addList = (list: TaskList) => setLists(prev => [...prev, list]);
-  const updateList = (id: string, updates: Partial<TaskList>) => setLists(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
-  const addTaskToList = (taskId: string, listId: string) => setLists(prev => prev.map(l => l.id === listId && !l.taskIds.includes(taskId) ? { ...l, taskIds: [...l.taskIds, taskId] } : l));
-  const removeTaskFromList = (taskId: string, listId: string) => setLists(prev => prev.map(l => l.id === listId ? { ...l, taskIds: l.taskIds.filter(id => id !== taskId) } : l));
-  const deleteList = (id: string) => setLists(prev => prev.filter(l => l.id !== id));
-  
-  const addEvent = (eventData: Omit<CalendarEvent, 'id'>) => {
-    const newEvent: CalendarEvent = { ...eventData, id: `event_${Date.now()}` };
-    setEvents(prev => [...prev, newEvent]);
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, bookmarked: !t.bookmarked } : t));
   };
-  const deleteEvent = (id: string) => setEvents(prev => prev.filter(e => e.id !== id));
-  const updateEvent = (id: string, updates: Partial<CalendarEvent>) => setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-  
+
+  const toggleComplete = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task && user) {
+      const isCompleting = !task.completed;
+      const completedAt = isCompleting ? new Date().toISOString() : null;
+      const { error } = await supabase.from('tasks').update({ 
+        completed: isCompleting, 
+        completed_at: completedAt 
+      }).eq('id', id);
+      
+      if (error) {
+        console.error('Error toggling complete:', error);
+        return;
+      }
+    }
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        const isCompleting = !t.completed;
+        return { ...t, completed: isCompleting, completedAt: isCompleting ? new Date().toISOString() : undefined };
+      }
+      return t;
+    }));
+  };
+
+  const updateTask = async (id: string, updates: Partial<Task>) => {
+    if (user) {
+      const mappedUpdates: any = {};
+      if (updates.name !== undefined) mappedUpdates.name = updates.name;
+      if (updates.priority !== undefined) mappedUpdates.priority = updates.priority;
+      if (updates.category !== undefined) mappedUpdates.category_name_legacy = updates.category;
+      if (updates.deadline !== undefined) mappedUpdates.deadline = updates.deadline;
+      if (updates.estimatedTime !== undefined) mappedUpdates.estimated_time = updates.estimatedTime;
+      if (updates.bookmarked !== undefined) mappedUpdates.bookmarked = updates.bookmarked;
+      if (updates.completed !== undefined) mappedUpdates.completed = updates.completed;
+      if (updates.completedAt !== undefined) mappedUpdates.completed_at = updates.completedAt;
+      
+      if (Object.keys(mappedUpdates).length > 0) {
+        const { error } = await supabase.from('tasks').update(mappedUpdates).eq('id', id);
+        if (error) {
+          console.error('Error updating task:', error);
+          return;
+        }
+      }
+    }
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  };
+
+  const addList = async (list: TaskList) => {
+    if (user) {
+      const { error } = await supabase.from('task_lists').insert({
+        id: list.id,
+        user_id: user.id,
+        name: list.name,
+        color: list.color
+      });
+      if (error) {
+        console.error('Error adding list:', error);
+        return;
+      }
+    }
+    setLists(prev => [...prev, list]);
+  };
+
+  const updateList = async (id: string, updates: Partial<TaskList>) => {
+    if (user) {
+      const mapped: any = {};
+      if (updates.name !== undefined) mapped.name = updates.name;
+      if (updates.color !== undefined) mapped.color = updates.color;
+      
+      if (Object.keys(mapped).length > 0) {
+        const { error } = await supabase.from('task_lists').update(mapped).eq('id', id);
+        if (error) {
+          console.error('Error updating list:', error);
+          return;
+        }
+      }
+    }
+    setLists(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+  };
+
+  const addTaskToList = async (taskId: string, listId: string) => {
+    if (user) {
+      const { error } = await supabase.from('task_list_items').insert({
+        list_id: listId,
+        task_id: taskId
+      });
+      if (error) {
+        console.error('Error adding task to list:', error);
+        return;
+      }
+    }
+    setLists(prev => prev.map(l => l.id === listId && !l.taskIds.includes(taskId) ? { ...l, taskIds: [...l.taskIds, taskId] } : l));
+  };
+
+  const removeTaskFromList = async (taskId: string, listId: string) => {
+    if (user) {
+      const { error } = await supabase.from('task_list_items').delete().eq('list_id', listId).eq('task_id', taskId);
+      if (error) {
+        console.error('Error removing task from list:', error);
+        return;
+      }
+    }
+    setLists(prev => prev.map(l => l.id === listId ? { ...l, taskIds: l.taskIds.filter(id => id !== taskId) } : l));
+  };
+
+  const deleteList = async (id: string) => {
+    if (user) {
+      const { error } = await supabase.from('task_lists').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting list:', error);
+        return;
+      }
+    }
+    setLists(prev => prev.filter(l => l.id !== id));
+  };
+
+  const addEvent = async (eventData: Omit<CalendarEvent, 'id'>) => {
+    if (user) {
+      const { data } = await supabase.from('calendar_events').insert({
+        user_id: user.id,
+        title: eventData.title,
+        start_time: eventData.start,
+        end_time: eventData.end,
+        color: eventData.color,
+        notes: eventData.notes,
+        task_id: eventData.taskId || null
+      }).select().single();
+      if (data) setEvents(prev => [...prev, { ...data, start: data.start_time, end: data.end_time, taskId: data.task_id }]);
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (user) await supabase.from('calendar_events').delete().eq('id', id);
+    setEvents(prev => prev.filter(e => e.id !== id));
+  };
+
+  const updateEvent = async (id: string, updates: Partial<CalendarEvent>) => {
+    if (user) {
+      const mapped = {
+        title: updates.title,
+        start_time: updates.start,
+        end_time: updates.end,
+        color: updates.color,
+        notes: updates.notes,
+        task_id: updates.taskId
+      };
+      await supabase.from('calendar_events').update(mapped).eq('id', id);
+    }
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  };
+
   const updateColorSettings = (colors: ColorSettings) => {
     setCategories(prev => prev.map(cat => ({
       ...cat,
@@ -553,43 +704,95 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })));
   };
 
-  const addCategory = (category: Category) => setCategories(prev => [...prev, category]);
-  const updateCategory = (id: string, updates: Partial<Category>) => setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-  const deleteCategory = (id: string) => setCategories(prev => prev.filter(c => c.id !== id));
-
-  const addOKRCategory = (category: OKRCategory) => setOkrCategories(prev => [...prev, category]);
-  const updateOKRCategory = (id: string, updates: Partial<OKRCategory>) => setOkrCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-    const deleteOKRCategory = (id: string) => setOkrCategories(prev => prev.filter(c => c.id !== id));
-  
-    const markMessagesAsRead = () => {
-      setMessages(prev => prev.map(msg => msg.receiverId === user?.id ? { ...msg, read: true } : msg));
-    };
-  
-    const login = async (email: string, password: string) => {
-    if (email === 'demo@cosmo.app' && password === 'demo') {
-      setUser(defaultUser);
-      return true;
+  const login = async (email: string, password: string) => {
+    console.log('[DEBUG] Login request:', email);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error('[DEBUG] Login error:', error.message);
+        return { success: false, error: error.message };
+      }
+      
+      // Data will be fetched by onAuthStateChange
+      return { success: true };
+    } catch (err: any) {
+      console.error('[DEBUG] Unexpected login error:', err);
+      return { success: false, error: err.message };
     }
-    return false;
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const newUser: User = { ...defaultUser, id: Date.now().toString(), name, email };
-    setUser(newUser);
-    return true;
+    console.log('[DEBUG] Register request:', email);
+    try {
+      if (supabaseAdmin) {
+        // Step 1: Create or Get confirmed user
+        const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { name }
+        });
+
+        if (adminError) {
+          if (adminError.message.includes('already exists')) {
+            console.log('[DEBUG] User already exists, ensuring confirmation...');
+            // Try to find the user to confirm them if they are not
+            const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+            const existing = users.find(u => u.email === email);
+            if (existing && !existing.email_confirmed_at) {
+              await supabaseAdmin.auth.admin.updateUserById(existing.id, { email_confirm: true });
+            }
+            return await login(email, password);
+          }
+          return { success: false, error: adminError.message };
+        }
+
+        if (adminData.user) {
+          return await login(email, password);
+        }
+      }
+
+      // Fallback
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } }
+      });
+
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      console.error('[DEBUG] Unexpected register error:', err);
+      return { success: false, error: err.message };
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const loginWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
   };
 
-  const watchAd = () => {
-    setUser(prev => prev ? { ...prev, premiumTokens: prev.premiumTokens + 1 } : null);
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
-  const consumePremiumToken = () => {
-    setUser(prev => (prev && prev.premiumTokens > 0) ? { ...prev, premiumTokens: prev.premiumTokens - 1, lastTokenConsumption: new Date().toISOString() } : prev);
+  const watchAd = async () => {
+    if (user) {
+      const newTokens = user.premiumTokens + 1;
+      await supabase.from('profiles').update({ premium_tokens: newTokens }).eq('id', user.id);
+      setUser(prev => prev ? { ...prev, premiumTokens: newTokens } : null);
+    }
+  };
+
+  const consumePremiumToken = async () => {
+    if (user && user.premiumTokens > 0) {
+      const newTokens = user.premiumTokens - 1;
+      const now = new Date().toISOString();
+      await supabase.from('profiles').update({ premium_tokens: newTokens, last_token_consumption: now }).eq('id', user.id);
+      setUser(prev => prev ? { ...prev, premiumTokens: newTokens, lastTokenConsumption: now } : prev);
+    }
   };
 
   const isPremium = () => {
@@ -598,94 +801,230 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return user.premiumTokens > 0;
   };
 
-  const sendMessage = (receiverId: string, content: string, taskId?: string) => {
-    const newMessage: Message = { 
-      id: Date.now().toString(), 
-      senderId: user?.id || 'user1', 
-      receiverId, 
-      content, 
-      timestamp: new Date().toISOString(), 
-      read: false,
-      taskId
-    };
-    setMessages(prev => [...prev, newMessage]);
-  };
-
-  const sendFriendRequest = (receiverId: string) => {
-    const newRequest: FriendRequest = { id: Date.now().toString(), senderId: user?.id || 'user1', receiverId, status: 'pending', timestamp: new Date().toISOString() };
-    setFriendRequests(prev => [...prev, newRequest]);
-  };
-
-  const acceptFriendRequest = (requestId: string) => {
-    const request = friendRequests.find(r => r.id === requestId);
-    if (request) {
-      // Ajouter le nouvel ami à la liste des amis
-      const newFriend: User = {
-        id: `friend-${Date.now()}`,
-        name: request.receiverId.split('@')[0] || 'Nouvel ami',
-        email: request.receiverId,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.receiverId}`,
-        premiumTokens: 0,
-        premiumWinStreak: 0,
-        lastTokenConsumption: new Date().toISOString(),
-        autoValidation: false
-      };
-      setFriends(prev => [...prev, newFriend]);
+  const sendMessage = async (receiverId: string, content: string, taskId?: string) => {
+    if (user) {
+      const { data } = await supabase.from('messages').insert({
+        sender_id: user.id,
+        receiver_id: receiverId,
+        content,
+        task_id: taskId || null
+      }).select().single();
+      if (data) setMessages(prev => [...prev, { ...data, senderId: data.sender_id, receiverId: data.receiver_id, timestamp: data.created_at, taskId: data.task_id }]);
     }
-    setFriendRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'accepted' } : r));
   };
-  const rejectFriendRequest = (requestId: string) => setFriendRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
 
-  const shareTask = (taskId: string, userId: string, permission: 'responsible' | 'editor' | 'observer') => {
-    setTasks(prev => prev.map(t => {
-      if (t.id === taskId) {
-        const isAlreadyCollaborator = t.collaborators?.includes(userId);
-        if (!isAlreadyCollaborator) {
-          sendMessage(userId, `Je t'ai partagé la tâche : ${t.name}`, taskId);
+  const sendFriendRequest = async (email: string) => {
+    if (user) {
+      try {
+        // Find user by email
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+        if (!profiles) {
+          toast.error("Utilisateur non trouvé");
+          return;
         }
-        return { 
-          ...t, 
-          isCollaborative: true, 
-          collaborators: isAlreadyCollaborator ? t.collaborators : [...(t.collaborators || []), userId], 
-          permissions: permission 
-        };
-      }
-      return t;
-    }));
-  };
 
-  const addHabit = (habit: Habit) => setHabits(prev => [...prev, habit]);
-  const toggleHabitCompletion = (habitId: string, date: string) => {
-    setHabits(prev => prev.map(habit => {
-      if (habit.id === habitId) {
-        const newCompletions = { ...habit.completions, [date]: !habit.completions[date] };
-        let streak = 0;
-        const today = new Date();
-        for (let i = 0; i < 30; i++) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const dStr = getLocalDateString(d);
-          if (newCompletions[dStr]) streak++; else break;
+        if (profiles.id === user.id) {
+          toast.error("Vous ne pouvez pas vous ajouter vous-même");
+          return;
         }
-        return { ...habit, completions: newCompletions, streak };
-      }
-      return habit;
-    }));
-  };
-  const updateHabit = (id: string, updates: Partial<Habit>) => setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
-  const deleteHabit = (id: string) => setHabits(prev => prev.filter(h => h.id !== id));
 
-  const addOKR = (okr: OKR) => {
-    const newOKR = {
-      ...okr,
-      startDate: okr.startDate || getLocalDateString(new Date())
-    };
-    setOkrs(prev => [...prev, newOKR]);
+        // Check if already friends or request pending
+        const { data: existing, error: existingError } = await supabase
+          .from('friendships')
+          .select('status')
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${profiles.id}),and(sender_id.eq.${profiles.id},receiver_id.eq.${user.id})`)
+          .maybeSingle();
+
+        if (existing) {
+          if (existing.status === 'accepted') {
+            toast.error("Vous êtes déjà amis");
+          } else {
+            toast.error("Une demande est déjà en attente");
+          }
+          return;
+        }
+
+        const { error } = await supabase.from('friendships').insert({ 
+          sender_id: user.id, 
+          receiver_id: profiles.id, 
+          status: 'pending' 
+        });
+
+        if (error) throw error;
+        toast.success("Demande d'ami envoyée");
+        fetchData(user.id);
+      } catch (err: any) {
+        console.error('Error sending friend request:', err);
+        toast.error("Erreur lors de l'envoi de la demande");
+      }
+    }
   };
-  const updateOKR = (id: string, updates: Partial<OKR>) => setOkrs(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-  const deleteOKR = (id: string) => setOkrs(prev => prev.filter(o => o.id !== id));
-  
-  const updateKeyResult = (okrId: string, keyResultId: string, updates: Partial<KeyResult>) => {
+
+  const acceptFriendRequest = async (requestId: string) => {
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('friendships')
+          .update({ status: 'accepted' })
+          .eq('id', requestId);
+
+        if (error) throw error;
+        toast.success("Demande d'ami acceptée");
+        fetchData(user.id);
+      } catch (err: any) {
+        console.error('Error accepting friend request:', err);
+        toast.error("Erreur lors de l'acceptation");
+      }
+    }
+  };
+
+  const rejectFriendRequest = async (requestId: string) => {
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('friendships')
+          .update({ status: 'rejected' })
+          .eq('id', requestId);
+
+        if (error) throw error;
+        toast.info("Demande d'ami refusée");
+        fetchData(user.id);
+      } catch (err: any) {
+        console.error('Error rejecting friend request:', err);
+        toast.error("Erreur lors du refus");
+      }
+    }
+  };
+
+  const shareTask = async (taskId: string, userId: string, permission: 'responsible' | 'editor' | 'observer') => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isCollaborative: true, collaborators: [...(t.collaborators || []), userId], permissions: permission } : t));
+  };
+
+  const addHabit = async (habit: Habit) => {
+    if (user) {
+      const { data } = await supabase.from('habits').insert({
+        user_id: user.id,
+        name: habit.name,
+        estimated_time: habit.estimatedTime,
+        color: habit.color,
+        streak: 0
+      }).select().single();
+      if (data) setHabits(prev => [...prev, { ...data, estimatedTime: data.estimated_time, completions: {} }]);
+    }
+  };
+
+  const toggleHabitCompletion = async (habitId: string, date: string) => {
+    if (user) {
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) return;
+      const isCompleted = habit.completions[date];
+      if (isCompleted) {
+        await supabase.from('habit_completions').delete().eq('habit_id', habitId).eq('completed_at', date);
+      } else {
+        await supabase.from('habit_completions').insert({ habit_id: habitId, completed_at: date });
+      }
+      setHabits(prev => prev.map(h => h.id === habitId ? { ...h, completions: { ...h.completions, [date]: !isCompleted } } : h));
+    }
+  };
+
+  const updateHabit = async (id: string, updates: Partial<Habit>) => {
+    if (user) {
+      const mapped = {
+        name: updates.name,
+        estimated_time: updates.estimatedTime,
+        color: updates.color,
+        streak: updates.streak
+      };
+      await supabase.from('habits').update(mapped).eq('id', id);
+    }
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
+  };
+
+  const deleteHabit = async (id: string) => {
+    if (user) await supabase.from('habits').delete().eq('id', id);
+    setHabits(prev => prev.filter(h => h.id !== id));
+  };
+
+  const addOKR = async (okr: OKR) => {
+    if (user) {
+      const { data } = await supabase.from('okrs').insert({
+        user_id: user.id,
+        title: okr.title,
+        description: okr.description,
+        category_name_legacy: okr.category,
+        start_date: okr.startDate || getLocalDateString(new Date()),
+        end_date: okr.endDate,
+        estimated_time: okr.estimatedTime
+      }).select().single();
+      if (data) {
+        const krs = await Promise.all(okr.keyResults.map(kr => 
+          supabase.from('okr_key_results').insert({
+            okr_id: data.id,
+            title: kr.title,
+            current_value: kr.currentValue,
+            target_value: kr.targetValue,
+            unit: kr.unit,
+            estimated_time: kr.estimatedTime
+          }).select().single()
+        ));
+        setOkrs(prev => [...prev, { 
+          ...data, 
+          startDate: data.start_date, 
+          endDate: data.end_date, 
+          keyResults: krs.map(r => r.data).filter(Boolean).map((kr: any) => ({
+            ...kr,
+            currentValue: kr.current_value,
+            targetValue: kr.target_value,
+            history: []
+          }))
+        }]);
+      }
+    }
+  };
+
+  const updateOKR = async (id: string, updates: Partial<OKR>) => {
+    if (user) {
+      const mapped = {
+        title: updates.title,
+        description: updates.description,
+        category_name_legacy: updates.category,
+        start_date: updates.startDate,
+        end_date: updates.endDate,
+        completed: updates.completed,
+        estimated_time: updates.estimatedTime
+      };
+      await supabase.from('okrs').update(mapped).eq('id', id);
+    }
+    setOkrs(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+  };
+
+  const updateKeyResult = async (okrId: string, keyResultId: string, updates: Partial<KeyResult>) => {
+    if (user) {
+      const mapped = {
+        title: updates.title,
+        current_value: updates.currentValue,
+        target_value: updates.targetValue,
+        unit: updates.unit,
+        completed: updates.completed,
+        estimated_time: updates.estimatedTime
+      };
+      await supabase.from('okr_key_results').update(mapped).eq('id', keyResultId);
+      if (updates.currentValue !== undefined) {
+        const kr = okrs.find(o => o.id === okrId)?.keyResults.find(k => k.id === keyResultId);
+        if (kr) {
+          await supabase.from('okr_key_result_history').insert({
+            key_result_id: keyResultId,
+            increment: updates.currentValue - kr.currentValue
+          });
+        }
+      }
+    }
     setOkrs(prev => prev.map(okr => {
       if (okr.id === okrId) {
         return {
@@ -694,10 +1033,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (kr.id === keyResultId) {
               const newHistory = [...(kr.history || [])];
               if (updates.currentValue !== undefined && updates.currentValue !== kr.currentValue) {
-                newHistory.push({
-                  date: getLocalDateString(new Date()),
-                  increment: updates.currentValue - kr.currentValue
-                });
+                newHistory.push({ date: getLocalDateString(new Date()), increment: updates.currentValue - kr.currentValue });
               }
               return { ...kr, ...updates, history: newHistory };
             }
@@ -709,7 +1045,127 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  const updateUserSettings = (updates: Partial<User>) => setUser(prev => prev ? { ...prev, ...updates } : null);
+  const deleteOKR = async (id: string) => {
+    if (user) await supabase.from('okrs').delete().eq('id', id);
+    setOkrs(prev => prev.filter(o => o.id !== id));
+  };
+
+  const updateUserSettings = async (updates: Partial<User>) => {
+    if (user) {
+      const mapped = {
+        name: updates.name,
+        avatar: updates.avatar,
+        auto_validation: updates.autoValidation
+      };
+      await supabase.from('profiles').update(mapped).eq('id', user.id);
+      setUser(prev => prev ? { ...prev, ...updates } : null);
+    }
+  };
+
+  const addCategory = async (category: Category) => {
+    if (user) {
+      const { data, error } = await supabase.from('categories').insert({
+        name: category.name,
+        color: category.color,
+        user_id: user.id
+      }).select().single();
+      
+      if (error) {
+        console.error('Error adding category:', error);
+        toast.error("Erreur lors de l'ajout de la catégorie");
+        return;
+      }
+      
+      if (data) {
+        setCategories(prev => [...prev, data]);
+      }
+    }
+  };
+
+  const updateCategory = async (id: string, updates: Partial<Category>) => {
+    if (user) {
+      const { error } = await supabase.from('categories').update({
+        name: updates.name,
+        color: updates.color
+      }).eq('id', id);
+      
+      if (error) {
+        console.error('Error updating category:', error);
+        toast.error("Erreur lors de la mise à jour");
+        return;
+      }
+    }
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const deleteCategory = async (id: string) => {
+    if (user) {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting category:', error);
+        toast.error("Erreur lors de la suppression");
+        return;
+      }
+    }
+    setCategories(prev => prev.filter(c => c.id !== id));
+  };
+
+  const addOKRCategory = async (category: OKRCategory) => {
+    if (user) {
+      const { data, error } = await supabase.from('okr_categories').insert({
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        user_id: user.id
+      }).select().single();
+      
+      if (error) {
+        console.error('Error adding OKR category:', error);
+        toast.error("Erreur lors de l'ajout de la catégorie OKR");
+        return;
+      }
+      
+      if (data) {
+        setOkrCategories(prev => [...prev, data]);
+      }
+    }
+  };
+
+  const updateOKRCategory = async (id: string, updates: Partial<OKRCategory>) => {
+    if (user) {
+      const { error } = await supabase.from('okr_categories').update({
+        name: updates.name,
+        color: updates.color,
+        icon: updates.icon
+      }).eq('id', id);
+      
+      if (error) {
+        console.error('Error updating OKR category:', error);
+        toast.error("Erreur lors de la mise à jour");
+        return;
+      }
+    }
+    setOkrCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const deleteOKRCategory = async (id: string) => {
+    if (user) {
+      const { error } = await supabase.from('okr_categories').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting OKR category:', error);
+        toast.error("Erreur lors de la suppression");
+        return;
+      }
+    }
+    setOkrCategories(prev => prev.filter(c => c.id !== id));
+  };
+
+  const markMessagesAsRead = async () => {
+    if (user) {
+      await supabase.from('messages').update({ read: true }).eq('receiver_id', user.id);
+      setMessages(prev => prev.map(msg => msg.receiverId === user.id ? { ...msg, read: true } : msg));
+    }
+  };
 
   const contextValue = {
     tasks, lists, events, colorSettings, categories, priorityRange, searchTerm, selectedCategories,
@@ -718,7 +1174,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addList, addTaskToList, removeTaskFromList, deleteList, updateList,
     addEvent, deleteEvent, updateEvent, updateColorSettings,
     setPriorityRange, setSearchTerm, setSelectedCategories,
-    login, register, logout, watchAd, consumePremiumToken, isPremium,
+    login, register, loginWithGoogle, logout, watchAd, consumePremiumToken, isPremium,
     sendMessage, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, shareTask,
     addHabit, toggleHabitCompletion, updateHabit, deleteHabit,
     addOKR, updateOKR, updateKeyResult, deleteOKR, updateUserSettings,
