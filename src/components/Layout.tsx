@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import {
+  Home,
   LayoutDashboard,
   CheckSquare,
   Calendar,
@@ -14,7 +15,7 @@ import {
   ChevronRight,
   Menu,
   X } from
-'lucide-react';
+  'lucide-react';
 import Logo from './Logo';
 import { useTasks } from '../context/TaskContext';
 import ThemeToggle from './ThemeToggle';
@@ -216,21 +217,9 @@ const Layout: React.FC = () => {
             <Logo showText={!isCollapsed || isMobile} />
           </div>
           
-          <div className={`mt-6 ${isCollapsed && !isMobile ? 'flex flex-col items-center gap-2' : 'w-full grid grid-cols-2'}`}>
-            <div className="flex justify-center">
+            <div className="mt-6 flex justify-center w-full">
               <ThemeToggle />
             </div>
-            <div className="flex justify-center">
-              <NavLink
-                to="/premium"
-                className="p-3.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                title="Passer à Premium"
-                onClick={() => setIsMobileMenuOpen(false)}>
-
-                <Crown size={20} className="text-amber-500" />
-              </NavLink>
-            </div>
-          </div>
         </div>
       
         <nav className={`flex-1 ${isCollapsed && !isMobile ? 'px-2' : 'px-4'} py-6 space-y-2 overflow-x-hidden overflow-y-auto`}>
