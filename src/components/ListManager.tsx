@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, X, Check } from 'lucide-react';
 import { useTasks, TaskList } from '../context/TaskContext';
 
-const ListManager: React.FC = () => {
+interface ListManagerProps {
+  isNested?: boolean;
+}
+
+const ListManager: React.FC<ListManagerProps> = ({ isNested }) => {
   const { lists, addList, deleteList, updateList } = useTasks();
   const [isCreating, setIsCreating] = useState(false);
   const [editingList, setEditingList] = useState<string | null>(null);
@@ -75,17 +79,17 @@ const ListManager: React.FC = () => {
   };
 
   return (
-    <div className="p-6 rounded-lg shadow-sm border transition-colors" style={{
+    <div className={`${isNested ? 'p-4' : 'p-6'} rounded-lg shadow-sm border transition-all duration-300`} style={{
       backgroundColor: 'rgb(var(--color-surface))',
       borderColor: 'rgb(var(--color-border))'
     }}>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'rgb(var(--color-text-primary))' }}>Gestion des listes</h2>
+        <h2 className={`${isNested ? 'text-lg' : 'text-xl'} font-bold`} style={{ color: 'rgb(var(--color-text-primary))' }}>Gestion des listes</h2>
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 rounded-lg px-4 py-2 transition-all shadow-sm border bg-blue-600 text-white border-blue-700 hover:bg-blue-700 dark:bg-blue-500 dark:border-blue-600 dark:hover:bg-blue-600 font-medium"
+          className={`flex items-center gap-2 rounded-lg ${isNested ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'} transition-all shadow-sm border bg-blue-600 text-white border-blue-700 hover:bg-blue-700 dark:bg-blue-500 dark:border-blue-600 dark:hover:bg-blue-600 font-medium`}
         >
-          <Plus size={20} />
+          <Plus size={isNested ? 16 : 20} />
           <span>Nouvelle liste</span>
         </button>
       </div>
@@ -94,7 +98,7 @@ const ListManager: React.FC = () => {
       {isCreating && (
         <div className="p-4 rounded-lg mb-6 transition-colors" style={{ backgroundColor: 'rgb(var(--color-hover))' }}>
           <h3 className="text-lg font-medium mb-4" style={{ color: 'rgb(var(--color-text-primary))' }}>Créer une nouvelle liste</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`grid grid-cols-1 ${isNested ? '' : 'md:grid-cols-2'} gap-4`}>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'rgb(var(--color-text-secondary))' }}>
                 Nom de la liste
@@ -145,7 +149,7 @@ const ListManager: React.FC = () => {
           <div className="flex justify-end gap-2 mt-4">
             <button
               onClick={() => setIsCreating(false)}
-              className="px-6 py-3 rounded-lg transition-all font-medium"
+              className={`${isNested ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg transition-all font-medium`}
               style={{
                 backgroundColor: 'rgb(var(--color-hover))',
                 color: 'rgb(var(--color-text-secondary))'
@@ -157,7 +161,7 @@ const ListManager: React.FC = () => {
             </button>
             <button
               onClick={handleCreateList}
-              className="px-6 py-3 rounded-lg transition-all font-bold text-white shadow-lg shadow-blue-500/25 bg-blue-600 hover:bg-blue-700 border border-blue-700"
+              className={`${isNested ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg transition-all font-bold text-white shadow-lg shadow-blue-500/25 bg-blue-600 hover:bg-blue-700 border border-blue-700`}
               onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
               onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
@@ -168,7 +172,7 @@ const ListManager: React.FC = () => {
       )}
 
       {/* Lists grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 ${isNested ? 'sm:grid-cols-1 md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4`}>
         {lists.map(list => (
           <div key={list.id} className="border rounded-lg p-4 transition-colors" style={{
             backgroundColor: 'rgb(var(--color-surface))',
@@ -266,20 +270,21 @@ const ListManager: React.FC = () => {
               <p className="text-slate-300 text-sm leading-relaxed mb-6">
                 Êtes-vous sûr de vouloir supprimer cette liste ? Toutes les tâches associées resteront mais ne seront plus groupées.
               </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setListToDelete(null)}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white border border-slate-600 hover:bg-slate-800 transition-all duration-200"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all duration-200"
-                >
-                  Supprimer
-                </button>
-              </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setListToDelete(null)}
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white border border-slate-600 hover:bg-slate-800 transition-all duration-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all duration-200"
+                  >
+                    Confirmer
+                  </button>
+                </div>
+
             </div>
           </div>
         </div>
