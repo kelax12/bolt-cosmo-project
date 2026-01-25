@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
 import { useTasks } from '../context/TaskContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
-// Composant pour l'icône Google
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -23,84 +22,109 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, mode, onSwitchMode }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
   });
   const { login, register, loginWithGoogle } = useTasks();
+  const navigate = useNavigate();
 
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      let success = false;
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsLoading(true);
+      console.log('[DEBUG] Submit mode:', mode);
       
-      if (mode === 'login') {
-        success = await login(formData.email, formData.password);
-        if (success) {
-          toast.success('Connexion réussie !');
-          onClose();
+      const timeout = 20000; // 20s timeout
+      const withTimeout = (promise: Promise<any>) => 
+        Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Le serveur ne répond pas. Veuillez réessayer.')), timeout))
+        ]);
+
+      try {
+        if (mode === 'login') {
+          console.log('[DEBUG] Calling login function...');
+          const result = await withTimeout(login(formData.email, formData.password));
+          console.log('[DEBUG] Login result:', result);
+          if (result.success) {
+            toast.success('Connexion réussie !');
+            onClose();
+            navigate('/dashboard');
+          } else {
+            console.error('[DEBUG] Login failed:', result.error);
+            if (result.error?.includes('Invalid login credentials')) {
+              toast.error('Email ou mot de passe incorrect');
+            } else {
+              toast.error(result.error || 'Erreur de connexion');
+            }
+          }
         } else {
-          toast.error('Email ou mot de passe incorrect');
+          console.log('[DEBUG] Calling register function...');
+          const result = await withTimeout(register(formData.name, formData.email, formData.password));
+          console.log('[DEBUG] Register result:', result);
+          
+          if (result.success) {
+            toast.success('Compte créé et connecté !');
+            onClose();
+            navigate('/dashboard');
+          } else {
+            console.error('[DEBUG] Registration failed:', result.error);
+            toast.error(result.error || 'Erreur lors de la création du compte');
+          }
+        }
+      } catch (error: any) {
+        console.error('[DEBUG] Unexpected error in handleSubmit:', error);
+        toast.error(error.message || 'Une erreur est survenue');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+
+  const handleDemoMode = async () => {
+    setIsLoading(true);
+    try {
+      const demoEmail = 'demo@cosmo.app';
+      const demoPassword = 'CosmoDemo2026!';
+      
+      console.log('[DEBUG] Attempting Demo Mode login...');
+      const result = await login(demoEmail, demoPassword);
+      
+      if (result.success) {
+        toast.success('Mode démo activé !');
+        onClose();
+        navigate('/dashboard');
+      } else if (result.error?.includes('Invalid login credentials')) {
+        console.log('[DEBUG] Demo account missing, creating it...');
+        const regResult = await register('Utilisateur Démo', demoEmail, demoPassword);
+        if (regResult.success) {
+          toast.success('Mode démo activé (nouveau compte) !');
+          onClose();
+          navigate('/dashboard');
+        } else {
+          toast.error('Erreur lors de l\'activation du mode démo');
         }
       } else {
-        success = await register(formData.name, formData.email, formData.password);
-        if (success) {
-          toast.success('Compte créé avec succès !');
-          onClose();
-        } else {
-          toast.error('Erreur lors de la création du compte');
-        }
+        toast.error(result.error || 'Erreur mode démo');
       }
     } catch (error) {
+      console.error('[DEBUG] Demo mode error:', error);
       toast.error('Une erreur est survenue');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        // Récupérer les informations de l'utilisateur avec le token d'accès
-        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
-        });
-        
-        const userInfo = await userInfoResponse.json();
-        
-        // Créer un credential JWT simulé pour la fonction loginWithGoogle
-        const mockCredential = btoa(JSON.stringify({
-          header: { alg: 'none', typ: 'JWT' },
-          payload: {
-            sub: userInfo.sub,
-            name: userInfo.name,
-            email: userInfo.email,
-            picture: userInfo.picture,
-          },
-        }));
-        
-        const credential = `header.${mockCredential}.signature`;
-        const success = await loginWithGoogle(credential);
-        
-        if (success) {
-          toast.success(`Bienvenue ${userInfo.name} !`);
-          onClose();
-        } else {
-          toast.error('Erreur lors de la connexion avec Google');
-        }
-      } catch (error) {
-        console.error('Erreur Google Login:', error);
-        toast.error('Erreur lors de la connexion avec Google');
-      }
-    },
-    onError: () => {
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (error) {
+      console.error('Erreur Google Login:', error);
       toast.error('Erreur lors de la connexion avec Google');
-    },
-  });
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -109,8 +133,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, mode, onSwitch
     }));
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-md relative">
         <button
           onClick={onClose}
@@ -132,7 +158,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, mode, onSwitch
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Bouton Google */}
           <button
             type="button"
             onClick={() => handleGoogleLogin()}
@@ -142,7 +167,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, mode, onSwitch
             {mode === 'login' ? 'Se connecter avec Google' : 'S\'inscrire avec Google'}
           </button>
 
-          {/* Séparateur */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-600 dark:border-slate-500"></div>
@@ -217,10 +241,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, mode, onSwitch
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+            {isLoading ? 'Chargement...' : (mode === 'login' ? 'Se connecter' : 'Créer mon compte')}
           </button>
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={handleDemoMode}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-lg font-semibold transition-all duration-300 border border-slate-700"
+            >
+              Mode Démo (Aperçu rapide)
+            </button>
+          )}
         </form>
 
         <div className="mt-6 text-center">
